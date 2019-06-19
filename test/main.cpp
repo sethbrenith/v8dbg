@@ -6,10 +6,10 @@
 // See the docs at
 // https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/using-the-debugger-engine-api
 
-const char* v8dbg = "C:\\src\\github\\v8dbg\\x64\\v8dbg.dll";
-const char* SymbolPath = "C:\\src\\github\\v8\\out\\x64.debug";
+const char* v8dbg = "d:\\repos\\v8dbg\\x64\\v8dbg.dll";
+const char* SymbolPath = "f:\\repos\\ana\\v8\\out\\debug_x64";
 const char* CommandLine =
-    "C:\\src\\github\\v8\\out\\x64.debug\\d8.exe c:\\temp\\test.js";
+    "f:\\repos\\ana\\v8\\out\\debug_x64\\d8.exe d:\\scripts\\wrapper.js";
 
 void RunTests() {
   // Get the Debug client
@@ -106,6 +106,7 @@ void RunTests() {
     printf(
         "***ERROR***: 'dx @$curisolate()' did not return the expected isolate "
         "types\n");
+    printf("%s\n", output.log.c_str());
   } else {
     printf("SUCCESS: Function alias @$curisolate\n");
   }
@@ -113,7 +114,7 @@ void RunTests() {
   output.log.clear();
   hr = pDebugControl->Execute(DEBUG_OUTCTL_ALL_CLIENTS, "dx name.Value",
                               DEBUG_EXECUTE_ECHO);
-  if (output.log.find("<SeqOneByteString>: c:\\temp\\test.js") == std::string::npos) {
+  if (output.log.find("<SeqOneByteString>: d:\\scripts\\wrapper.js") == std::string::npos) {
     printf(
         "***ERROR***: 'dx name.Value' did not return the expected local "
         "representation\n");
