@@ -19,7 +19,7 @@ target_sources(v8dbg PRIVATE "src/v8.cpp" "src/v8.h" "src/v8-layout.h" "src/curi
 add_executable(v8dbg-test "test/main.cpp" "test/common.h")
 
 # DbgEng and DbgModel are needed for Debugger extensions. RuntimeObject for COM.
-target_link_libraries(v8dbg DbgEng DbgModel RuntimeObject "f:/repos/ana/v8/out/debug_x64/v8_debug_helper.dll.lib")
+target_link_libraries(v8dbg DbgEng DbgModel RuntimeObject comsuppwd "f:/repos/ana/v8/out/debug_x64/v8_debug_helper.dll.lib")
 target_link_libraries(v8dbg-test DbgEng DbgModel RuntimeObject)
 
 target_include_directories(v8dbg PRIVATE "f:/repos/ana/v8/tools/debug_helper")

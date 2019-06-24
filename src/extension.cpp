@@ -2,6 +2,8 @@
 #include "extension.h"
 #include "curisolate.h"
 #include "object.h"
+#include <comutil.h>
+#include <iostream>
 
 Extension* Extension::currentExtension = nullptr;
 const wchar_t *pcurIsolate = L"curisolate";
@@ -32,6 +34,46 @@ void DestroyExtension() {
   return;
 }
 
+bool DoesTypeDeriveFromObject(winrt::com_ptr<IDebugHostType>& spType) {
+  _bstr_t name;
+  HRESULT hr = spType->GetName(name.GetAddress());
+  if (!SUCCEEDED(hr)) return false;
+  std::wcout << L"Testing: " << static_cast<wchar_t*>(name) << L"\n";
+  if (std::wstring(static_cast<wchar_t*>(name)) == L"v8::internal::Object") return true;
+
+  winrt::com_ptr<IDebugHostSymbolEnumerator> spSuperClassEnumerator;
+  hr = spType->EnumerateChildren(SymbolKind::SymbolBaseClass, nullptr, spSuperClassEnumerator.put());
+  if (!SUCCEEDED(hr)) return false;
+
+  while (true) {
+    winrt::com_ptr<IDebugHostSymbol> spTypeSymbol;
+    if (spSuperClassEnumerator->GetNext(spTypeSymbol.put()) != S_OK) break;
+    winrt::com_ptr<IDebugHostBaseClass> spBaseClass = spTypeSymbol.as<IDebugHostBaseClass>();
+    winrt::com_ptr<IDebugHostType> spBaseType;
+    hr = spBaseClass->GetType(spBaseType.put());
+    if (!SUCCEEDED(hr)) continue;
+    if (DoesTypeDeriveFromObject(spBaseType)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void Extension::TryRegisterType(winrt::com_ptr<IDebugHostType>& spType, std::u16string typeName) {
+  auto insertion_result = registered_handler_types.insert({typeName, nullptr});
+  if (!insertion_result.second) return;
+  if (DoesTypeDeriveFromObject(spType)) {
+    winrt::com_ptr<IDebugHostTypeSignature> spObjectTypeSignature;
+    HRESULT hr = spDebugHostSymbols->CreateTypeSignature(reinterpret_cast<const wchar_t*>(typeName.c_str()), nullptr,
+                                            spObjectTypeSignature.put());
+    if (FAILED(hr)) return;
+    hr = spDataModelManager->RegisterModelForTypeSignature(
+        spObjectTypeSignature.get(), spObjectDataModel.get());
+    insertion_result.first->second = spObjectTypeSignature;
+  }
+}
+
 winrt::com_ptr<IDebugHostType> Extension::GetV8ObjectType(winrt::com_ptr<IDebugHostContext>& spCtx, const char16_t* typeName) {
   bool isEqual;
   if (spV8ModuleCtx == nullptr || !SUCCEEDED(spV8ModuleCtx->IsEqualTo(spCtx.get(), &isEqual)) || !isEqual) {
@@ -45,6 +87,14 @@ winrt::com_ptr<IDebugHostType> Extension::GetV8ObjectType(winrt::com_ptr<IDebugH
   auto& dictionaryEntry = spV8ObjectTypes[typeName];
   if (dictionaryEntry == nullptr) {
     HRESULT hr = spV8Module->FindTypeByName(reinterpret_cast<PCWSTR>(typeName), dictionaryEntry.put());
+    if (SUCCEEDED(hr)) {
+      // It's too slow to enumerate all types in the v8 module up front and
+      // register type handlers for all of them, but we can opportunistically do
+      // so here for any types that we happen to be using. This makes the user
+      // experience a little nicer because you can avoid opening one extra level
+      // of data.
+      TryRegisterType(dictionaryEntry, typeName);
+    }
   }
   return dictionaryEntry;
 }
@@ -110,11 +160,13 @@ bool Extension::Initialize() {
   if (FAILED(hr)) return false;
 
   // Parent the model for the type
+  winrt::com_ptr<IDebugHostTypeSignature> spObjectTypeSignature;
   hr = spDebugHostSymbols->CreateTypeSignature(L"v8::internal::Object", nullptr,
                                           spObjectTypeSignature.put());
   if (FAILED(hr)) return false;
   hr = spDataModelManager->RegisterModelForTypeSignature(
       spObjectTypeSignature.get(), spObjectDataModel.get());
+  registered_handler_types[u"v8::internal::Object"] = spObjectTypeSignature;
 
   // Create an instance of the DataModel 'parent' class for v8::Local<*> types
   auto localDataModel{winrt::make<V8LocalDataModel>()};
@@ -174,8 +226,12 @@ Extension::~Extension() {
   _RPTF0(_CRT_WARN, "Entered Extension::~Extension\n");
   spDebugHostExtensibility->DestroyFunctionAlias(pcurIsolate);
 
-  spDataModelManager->UnregisterModelForTypeSignature(
-      spObjectDataModel.get(), spObjectTypeSignature.get());
+  for (const auto& registered : registered_handler_types) {
+    if (registered.second != nullptr) {
+      spDataModelManager->UnregisterModelForTypeSignature(
+          spObjectDataModel.get(), registered.second.get());
+    }
+  }
   spDataModelManager->UnregisterModelForTypeSignature(
       spLocalDataModel.get(), spLocalTypeSignature.get());
   spDataModelManager->UnregisterModelForTypeSignature(
