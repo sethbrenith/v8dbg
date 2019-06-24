@@ -8,7 +8,7 @@ class Extension {
   bool Initialize();
   ~Extension();
   winrt::com_ptr<IDebugHostModule> GetV8Module(winrt::com_ptr<IDebugHostContext>& spCtx);
-  winrt::com_ptr<IDebugHostType> Extension::GetV8ObjectType(winrt::com_ptr<IDebugHostContext>& spCtx);
+  winrt::com_ptr<IDebugHostType> Extension::GetV8ObjectType(winrt::com_ptr<IDebugHostContext>& spCtx, const char16_t* typeName = u"v8::internal::Object");
   static Extension* currentExtension;
 
   V8::Layout::V8Layout v8Layout;
@@ -27,6 +27,6 @@ class Extension {
 
  private:
   winrt::com_ptr<IDebugHostModule> spV8Module;
-  winrt::com_ptr<IDebugHostType> spV8ObjectType;
+  std::unordered_map<std::u16string, winrt::com_ptr<IDebugHostType>> spV8ObjectTypes;
   winrt::com_ptr<IDebugHostContext> spV8ModuleCtx;
 };

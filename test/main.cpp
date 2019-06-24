@@ -105,8 +105,7 @@ void RunTests() {
       std::string::npos) {
     printf(
         "***ERROR***: 'dx @$curisolate()' did not return the expected isolate "
-        "types\n");
-    printf("%s\n", output.log.c_str());
+        "types\n%s\n", output.log.c_str());
   } else {
     printf("SUCCESS: Function alias @$curisolate\n");
   }
@@ -117,7 +116,7 @@ void RunTests() {
   if (output.log.find("<SeqOneByteString>: d:\\scripts\\wrapper.js") == std::string::npos) {
     printf(
         "***ERROR***: 'dx name.Value' did not return the expected local "
-        "representation\n");
+        "representation\n%s\n", output.log.c_str());
   } else {
     printf("SUCCESS: v8::Local<v8::Value> decoding\n");
   }
@@ -128,7 +127,7 @@ void RunTests() {
   if (output.log.find("<Oddball>Null") == std::string::npos) {
     printf(
         "***ERROR***: 'dx maybe_result.Value' did not return the expected Oddball "
-        "representation\n");
+        "representation\n%s\n", output.log.c_str());
   } else {
     printf("SUCCESS: Oddball support\n");
   }

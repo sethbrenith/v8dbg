@@ -204,7 +204,7 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
                 // Ideally should be the ptr, not the memory address.
                 hr = contextObject->GetContext(spCtx.put());
                 if (FAILED(hr)) return hr;
-                spV8Object = Extension::currentExtension->GetV8ObjectType(spCtx);
+                spV8Object = Extension::currentExtension->GetV8ObjectType(spCtx, k.strValue.c_str());
                 if (spV8Object == nullptr) return E_FAIL;
 
                 spDataModelManager->CreateTypedObject(spCtx.get(), Location{k.addrValue},

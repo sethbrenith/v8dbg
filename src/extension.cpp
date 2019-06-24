@@ -32,21 +32,21 @@ void DestroyExtension() {
   return;
 }
 
-winrt::com_ptr<IDebugHostType> Extension::GetV8ObjectType(winrt::com_ptr<IDebugHostContext>& spCtx) {
-  if (spV8ObjectType != nullptr) {
-    bool isEqual;
-    if (SUCCEEDED(spV8ModuleCtx->IsEqualTo(spCtx.get(), &isEqual)) && isEqual) {
-      return spV8ObjectType;
-    } else {
-      spV8ObjectType = nullptr;
-    }
+winrt::com_ptr<IDebugHostType> Extension::GetV8ObjectType(winrt::com_ptr<IDebugHostContext>& spCtx, const char16_t* typeName) {
+  bool isEqual;
+  if (spV8ModuleCtx == nullptr || !SUCCEEDED(spV8ModuleCtx->IsEqualTo(spCtx.get(), &isEqual)) || !isEqual) {
+    // Context changed; clear the dictionary.
+    spV8ObjectTypes.clear();
   }
 
   GetV8Module(spCtx); // Will force the correct module to load
-  if (spV8Module == nullptr) return spV8ObjectType; // Will also be null here
+  if (spV8Module == nullptr) return nullptr;
 
-  HRESULT hr = spV8Module->FindTypeByName(L"v8::internal::Object", spV8ObjectType.put());
-  return spV8ObjectType;
+  auto& dictionaryEntry = spV8ObjectTypes[typeName];
+  if (dictionaryEntry == nullptr) {
+    HRESULT hr = spV8Module->FindTypeByName(reinterpret_cast<PCWSTR>(typeName), dictionaryEntry.put());
+  }
+  return dictionaryEntry;
 }
 
 winrt::com_ptr<IDebugHostModule> Extension::GetV8Module(winrt::com_ptr<IDebugHostContext>& spCtx) {
