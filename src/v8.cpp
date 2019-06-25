@@ -65,7 +65,11 @@ V8HeapObject GetHeapObject(MemReader memReader, uint64_t taggedPtr, uint64_t ref
     //printf("%s: %s: %llx\n", sourceProp.name, sourceProp.type, sourceProp.values[0].value);
     Property destProp(WidenString(sourceProp.name), WidenString(sourceProp.type));
     destProp.type = PropertyType::TaggedPtr;
+    if (sourceProp.kind != d::PropertyKind::kSingle) {
+      destProp.type = PropertyType::TaggedPtrArray;
+    }
     destProp.addrValue = sourceProp.address;
+    destProp.length = sourceProp.num_values;
     // TODO indexed values
     obj.Properties.push_back(destProp);
   }

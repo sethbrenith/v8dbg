@@ -20,6 +20,7 @@ enum class PropertyType {
   Bool,
   Address,
   TaggedPtr,
+  TaggedPtrArray,
 };
 
 struct Property {
@@ -42,6 +43,8 @@ struct Property {
     bool boolValue;
     uint64_t addrValue;
   };
+
+  size_t length; // Only relevant for TaggedPtrArray
 };
 
 struct V8MapObject {

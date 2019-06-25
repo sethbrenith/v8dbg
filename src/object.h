@@ -208,12 +208,24 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
                 *keyValue = spValue.detach();
                 break;
               case PropertyType::TaggedPtr:
-                // TODO: if this property was a compressed pointer, then we need
-                // to register a synthetic type name for it.
+              case PropertyType::TaggedPtrArray:
+                // TODO: if this property was a compressed pointer, then can we
+                // somehow keep its uncompressed type? That would let us supply
+                // a type hint on subsequent calls, which is good for working in
+                // partial dumps.
                 hr = contextObject->GetContext(spCtx.put());
                 if (FAILED(hr)) return hr;
                 spV8Object = Extension::currentExtension->GetV8ObjectType(spCtx, k.strValue.c_str());
                 if (spV8Object == nullptr) return E_FAIL;
+
+                if (k.type == PropertyType::TaggedPtrArray) {
+                  ULONG64 objectSize{};
+                  spV8Object->GetSize(&objectSize);
+                  ArrayDimension dimensions[] = {{/*start=*/0, /*length=*/k.length, /*stride=*/objectSize}};
+                  winrt::com_ptr<IDebugHostType> spV8ObjectArray;
+                  spV8Object->CreateArrayOf(/*dimensions=*/1, dimensions, spV8ObjectArray.put());
+                  spV8Object = spV8ObjectArray;
+                }
 
                 spDataModelManager->CreateTypedObject(spCtx.get(), Location{k.addrValue},
                     spV8Object.get(), spValue.put());
