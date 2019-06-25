@@ -5,6 +5,7 @@
 #include "v8.h"
 #include <vector>
 #include <string>
+#include <comutil.h>
 
 // The representation of the underlying V8 object that will be cached on the
 // DataModel representation. (Needs to implement IUnknown).
@@ -29,9 +30,16 @@ struct V8CachedObject: winrt::implements<V8CachedObject, IV8CachedObject> {
       return SUCCEEDED(hr);
     };
 
+    winrt::com_ptr<IDebugHostType> spType;
+    _bstr_t type_name;
+    bool compressed_pointer = SUCCEEDED(pV8ObjectInstance->GetTypeInfo(spType.put()))
+        && SUCCEEDED(spType->GetName(type_name.GetAddress()))
+        && static_cast<wchar_t*>(type_name) == std::wstring(L"v8::internal::TaggedValue");
+
     uint64_t taggedPtr;
     Extension::currentExtension->spDebugHostMemory->ReadPointers(spContext.get(), loc, 1, &taggedPtr);
-    heapObject = ::GetHeapObject(memReader, taggedPtr);
+    if (compressed_pointer) taggedPtr = static_cast<uint32_t>(taggedPtr);
+    heapObject = ::GetHeapObject(memReader, taggedPtr, loc.GetOffset());
   }
 
   V8HeapObject heapObject;
@@ -200,8 +208,8 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
                 *keyValue = spValue.detach();
                 break;
               case PropertyType::TaggedPtr:
-                // TODO: If this is a tagged ptr, check it's not a Smi
-                // Ideally should be the ptr, not the memory address.
+                // TODO: if this property was a compressed pointer, then we need
+                // to register a synthetic type name for it.
                 hr = contextObject->GetContext(spCtx.put());
                 if (FAILED(hr)) return hr;
                 spV8Object = Extension::currentExtension->GetV8ObjectType(spCtx, k.strValue.c_str());

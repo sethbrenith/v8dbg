@@ -66,4 +66,4 @@ bool ReadTypeFromMemory(MemReader memReader, uint64_t address, T* buffer) {
   return true;
 }
 
-V8HeapObject GetHeapObject(MemReader memReader, uint64_t address);
+V8HeapObject GetHeapObject(MemReader memReader, uint64_t address, uint64_t referringPointer);

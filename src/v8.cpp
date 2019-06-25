@@ -47,19 +47,23 @@ std::u16string WidenString(const char* data) {
   return stream.str();
 }
 
-V8HeapObject GetHeapObject(MemReader memReader, uint64_t taggedPtr) {
+V8HeapObject GetHeapObject(MemReader memReader, uint64_t taggedPtr, uint64_t referringPointer) {
   // Read the value at the address, and see if it is a tagged pointer
 
   V8HeapObject obj;
   MemReaderScope reader_scope(memReader);
 
   d::Roots heap_roots = {0};
+  // TODO ideally we'd provide real roots here. For now, just testing
+  // decompression based on the pointer to wherever we found this value, which
+  // is likely (though not guaranteed) to be a heap pointer itself.
+  heap_roots.any_heap_pointer = referringPointer;
   auto props = d::GetObjectProperties(taggedPtr, reader_scope.GetReader(), heap_roots);
   obj.FriendlyName = WidenString(props->brief);
   for (int propertyIndex = 0; propertyIndex < props->num_properties; ++propertyIndex) {
     const auto& sourceProp = *props->properties[propertyIndex];
     //printf("%s: %s: %llx\n", sourceProp.name, sourceProp.type, sourceProp.values[0].value);
-    Property destProp(WidenString(sourceProp.name), WidenString(sourceProp.type_name));
+    Property destProp(WidenString(sourceProp.name), WidenString(sourceProp.type));
     destProp.type = PropertyType::TaggedPtr;
     destProp.addrValue = sourceProp.address;
     // TODO indexed values

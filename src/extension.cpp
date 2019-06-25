@@ -2,7 +2,6 @@
 #include "extension.h"
 #include "curisolate.h"
 #include "object.h"
-#include <comutil.h>
 #include <iostream>
 
 Extension* Extension::currentExtension = nullptr;
@@ -38,7 +37,6 @@ bool DoesTypeDeriveFromObject(winrt::com_ptr<IDebugHostType>& spType) {
   _bstr_t name;
   HRESULT hr = spType->GetName(name.GetAddress());
   if (!SUCCEEDED(hr)) return false;
-  std::wcout << L"Testing: " << static_cast<wchar_t*>(name) << L"\n";
   if (std::wstring(static_cast<wchar_t*>(name)) == L"v8::internal::Object") return true;
 
   winrt::com_ptr<IDebugHostSymbolEnumerator> spSuperClassEnumerator;
@@ -160,13 +158,15 @@ bool Extension::Initialize() {
   if (FAILED(hr)) return false;
 
   // Parent the model for the type
-  winrt::com_ptr<IDebugHostTypeSignature> spObjectTypeSignature;
-  hr = spDebugHostSymbols->CreateTypeSignature(L"v8::internal::Object", nullptr,
-                                          spObjectTypeSignature.put());
-  if (FAILED(hr)) return false;
-  hr = spDataModelManager->RegisterModelForTypeSignature(
-      spObjectTypeSignature.get(), spObjectDataModel.get());
-  registered_handler_types[u"v8::internal::Object"] = spObjectTypeSignature;
+  for (const char16_t* name : {u"v8::internal::Object", u"v8::internal::TaggedValue"}) {
+    winrt::com_ptr<IDebugHostTypeSignature> spObjectTypeSignature;
+    hr = spDebugHostSymbols->CreateTypeSignature(reinterpret_cast<const wchar_t*>(name), nullptr,
+                                            spObjectTypeSignature.put());
+    if (FAILED(hr)) return false;
+    hr = spDataModelManager->RegisterModelForTypeSignature(
+        spObjectTypeSignature.get(), spObjectDataModel.get());
+    registered_handler_types[name] = spObjectTypeSignature;
+  }
 
   // Create an instance of the DataModel 'parent' class for v8::Local<*> types
   auto localDataModel{winrt::make<V8LocalDataModel>()};
