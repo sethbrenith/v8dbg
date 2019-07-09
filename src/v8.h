@@ -8,10 +8,6 @@
 
 using MemReader = std::function<bool(uint64_t address, size_t size, uint8_t* buffer)>;
 
-// TODO: Specific to x64 non-compressed pointers currently
-inline uint64_t UnTagPtr(uint64_t ptr) { return ptr &= ~0x03ull; }
-inline int UntagSmi(uint64_t smi) { return static_cast<int>(static_cast<intptr_t>(smi) >> 32); }
-
 enum class PropertyType {
   Smi,
   UInt,
@@ -47,26 +43,11 @@ struct Property {
   size_t length; // Only relevant for TaggedPtrArray
 };
 
-struct V8MapObject {
-  uint64_t HeapAddress;
-  uint16_t InstanceType;
-  std::u16string TypeName;
-  // TODO Other fields, including slots etc.
-};
-
 struct V8HeapObject {
   uint64_t HeapAddress;
   bool IsSmi = false;
   std::u16string FriendlyName;  // e.g. string: "Hello, world"
-  V8MapObject Map;
   std::vector<Property> Properties;
 };
-
-template <typename T>
-bool ReadTypeFromMemory(MemReader memReader, uint64_t address, T* buffer) {
-  size_t byteCount = sizeof *buffer;
-  memReader(address, byteCount, reinterpret_cast<uint8_t*>(buffer));
-  return true;
-}
 
 V8HeapObject GetHeapObject(MemReader memReader, uint64_t address, uint64_t referringPointer);

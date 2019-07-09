@@ -1,7 +1,6 @@
 #include "../utilities.h"
 #include "object.h"
 #include "extension.h"
-#include "v8-layout.h"
 #include "v8.h"
 
 HRESULT V8LocalValueProperty::GetValue(PCWSTR pwszKey,

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../utilities.h"
-#include "v8-layout.h"
 #include <unordered_set>
 
 class Extension {
@@ -13,7 +12,6 @@ class Extension {
   void TryRegisterType(winrt::com_ptr<IDebugHostType>& spType, std::u16string typeName);
   static Extension* currentExtension;
 
-  V8::Layout::V8Layout v8Layout;
   winrt::com_ptr<IDebugHostMemory2> spDebugHostMemory;
   winrt::com_ptr<IDebugHostSymbols> spDebugHostSymbols;
   winrt::com_ptr<IDebugHostExtensibility> spDebugHostExtensibility;
