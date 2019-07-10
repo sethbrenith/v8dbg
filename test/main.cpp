@@ -11,6 +11,29 @@ const char* SymbolPath = "f:\\repos\\ana\\v8\\out\\debug_x64";
 const char* CommandLine =
     "f:\\repos\\ana\\v8\\out\\debug_x64\\d8.exe d:\\scripts\\wrapper.js";
 
+class LoadExtensionScope {
+ public:
+  LoadExtensionScope(winrt::com_ptr<IDebugControl3> pDebugControl) :
+      pDebugControl(pDebugControl) {
+    HRESULT hr = pDebugControl->AddExtension(v8dbg, 0, &extHandle);
+    winrt::check_hresult(hr);
+    // HACK: Below fails, but is required for the extension to actually
+    // initialize. Just the AddExtension call doesn't actually load and
+    // initialize it.
+    pDebugControl->CallExtension(extHandle, "Foo", "Bar");
+  }
+  ~LoadExtensionScope() {
+    // Let the extension uninitialize so it can deallocate memory, meaning any
+    // reported memory leaks should be real bugs.
+    pDebugControl->RemoveExtension(extHandle);
+  }
+ private:
+  LoadExtensionScope(const LoadExtensionScope&) = delete;
+  LoadExtensionScope& operator=(const LoadExtensionScope&) = delete;
+  winrt::com_ptr<IDebugControl3> pDebugControl;
+  ULONG64 extHandle;
+};
+
 void RunTests() {
   // Get the Debug client
   winrt::com_ptr<IDebugClient5> pClient;
@@ -31,11 +54,8 @@ void RunTests() {
   hr = pSymbols->SetSymbolPath(SymbolPath);
   winrt::check_hresult(hr);
 
-  // Set the callbacks
-  MyOutput output;
+  // Set the event callbacks
   MyCallback callback;
-  hr = pClient->SetOutputCallbacks(&output);
-  winrt::check_hresult(hr);
   hr = pClient->SetEventCallbacks(&callback);
   winrt::check_hresult(hr);
 
@@ -83,12 +103,12 @@ void RunTests() {
       reinterpret_cast<PSTR>(desc), 1024, &descUsed);
   winrt::check_hresult(hr);
 
-  ULONG64 extHandle;
-  hr = pDebugControl->AddExtension(v8dbg, 0, &extHandle);
-  // HACK: Below fails, but is required for the extension to actually
-  // initialize. Just the AddExtension call doesn't actually load and initialize
-  // it.
-  pDebugControl->CallExtension(extHandle, "Foo", "Bar");
+  LoadExtensionScope extension_loaded(pDebugControl);
+
+  // Set the output callbacks after the extension is loaded, so it gets
+  // destroyed before the extension unloads. This avoids reporting incorrectly
+  // reporting that the output buffer was leaked during extension teardown.
+  MyOutput output(pClient);
 
   // Step one line to ensure locals are available
   hr = pDebugControl->SetCodeLevel(DEBUG_LEVEL_SOURCE);

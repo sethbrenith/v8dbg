@@ -13,6 +13,16 @@
 #include <string>
 
 struct MyOutput : IDebugOutputCallbacks {
+  MyOutput(winrt::com_ptr<IDebugClient5> pClient) : pClient(pClient) {
+    HRESULT hr = pClient->SetOutputCallbacks(this);
+    winrt::check_hresult(hr);
+  }
+  ~MyOutput() {
+    pClient->SetOutputCallbacks(nullptr);
+  }
+  MyOutput(const MyOutput&) = delete;
+  MyOutput& operator=(const MyOutput&) = delete;
+
   // Inherited via IDebugOutputCallbacks
   virtual HRESULT __stdcall QueryInterface(REFIID InterfaceId,
                                            PVOID* Interface) override {
@@ -27,6 +37,7 @@ struct MyOutput : IDebugOutputCallbacks {
     return S_OK;
   }
 
+  winrt::com_ptr<IDebugClient5> pClient;
   std::string log;
 };
 
