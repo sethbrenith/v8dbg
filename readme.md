@@ -8,6 +8,25 @@ WinDbg extension. The V8-specific implementation (under `./src`) then implements
 the two methods declared near the top of `dbgext.h` to create and destroy the
 extension instance.
 
+## Hard-coded prerequisites
+
+This is not yet ready for easy consumption. It includes the following hard-coded
+paths, which you will need to update in the code (main.cpp and runtests.bat) to
+point to the appropriate location on your machine.
+
+* A V8 output directory, where you have built at least the targets `d8` and
+  `v8_debug_helper`, with gn arg `is_component_build = true`. Currently
+  `f:\repos\ana\v8\out\debug_x64`.
+* The path for this extension's built output. Currently
+  `d:\repos\v8dbg\x64\v8dbg.dll`.
+* The path for your installation of WinDbgX. Currently
+  `%LOCALAPPDATA%\DBG\UI\Slow.20190520.1\amd64`.
+* The path for a JavaScript file to run when executing the test executable.
+  Currently `d:\scripts\wrapper.js`. This can be any valid JavaScript program.
+  The test executable will say it fails regardless, but will also print the
+  result of the `dx` command on the value returned by the script (the return
+  value of the script's last statement). An empty file is a valid script.
+
 ## Building
 
 1. Open a `Native x64 Developer Tools` command prompt installed by VS 2019.
