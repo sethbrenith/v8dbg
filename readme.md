@@ -30,6 +30,8 @@ point to the appropriate location on your machine.
 ## Building
 
 1. Open a `Native x64 Developer Tools` command prompt installed by VS 2019.
+   (Note: the developer VS prompt defaults to x86 and that causes build errors
+   if you try to use it.)
 2. Create a `.\x64` directory under the project and CD into it.
 3. To create the build files run: `cmake -G Ninja ../`
 4. To build, in the same directory run: `ninja` (or, from the root directory,

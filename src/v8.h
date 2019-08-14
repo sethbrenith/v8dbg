@@ -6,7 +6,8 @@
 #include <string>
 #include <vector>
 
-using MemReader = std::function<bool(uint64_t address, size_t size, uint8_t* buffer)>;
+using MemReader = 
+  std::function<bool(uint64_t address, size_t size, uint8_t* buffer)>;
 
 enum class PropertyType {
   Smi,
@@ -29,7 +30,7 @@ struct Property {
   PropertyType type;
 
   // strValue is used if the type is String or Object
-  // An NativeObject will have its type in strValue, and pointer in addrValue
+  // A NativeObject will have its type in strValue, and pointer in addrValue
   std::u16string strValue;
 
   union {
@@ -40,7 +41,7 @@ struct Property {
     uint64_t addrValue;
   };
 
-  size_t length; // Only relevant for TaggedPtrArray
+  size_t length = 0; // Only relevant for TaggedPtrArray
 };
 
 struct V8HeapObject {
