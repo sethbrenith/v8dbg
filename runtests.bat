@@ -14,7 +14,7 @@ IF NOT EXIST "%BINDIR%\v8dbg.dll" (
 )
 
 ROBOCOPY "%BINDIR%" "%DBGDIR%" v8dbg.dll v8dbg.pdb v8dbg-test.exe v8dbg-test.pdb > NUL
-ROBOCOPY "%HELPERDIR%" "%DBGDIR%" v8_debug_helper.dll libc++.dll > NUL
+ROBOCOPY "%HELPERDIR%" "%DBGDIR%" v8_debug_helper.dll v8_libbase.dll libc++.dll > NUL
 
 IF /I "%1" == "dbg" (
   windbgx "%DBGDIR%\v8dbg-test.exe"
