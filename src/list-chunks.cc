@@ -2,7 +2,7 @@
 #include "curisolate.h"
 
 // v8dbg!ListChunksAlias::Call
-HRESULT __stdcall ListChunksAlias::Call(IModelObject* pContextObject,
+HRESULT __stdcall ListChunksAlias::Call(IModelObject* p_context_object,
                                         ULONG64 arg_count,
                                         _In_reads_(arg_count)
                                             IModelObject** pp_arguments,

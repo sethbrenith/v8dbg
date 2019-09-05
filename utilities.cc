@@ -1,15 +1,15 @@
 #include "utilities.h"
 
-HRESULT CreateProperty(IDataModelManager* pManager,
-                       IModelPropertyAccessor* pProperty,
+HRESULT CreateProperty(IDataModelManager* p_manager,
+                       IModelPropertyAccessor* p_property,
                        IModelObject** pp_property_object) {
   *pp_property_object = nullptr;
 
   VARIANT vt_val;
   vt_val.vt = VT_UNKNOWN;
-  vt_val.punkVal = pProperty;
+  vt_val.punkVal = p_property;
 
-  HRESULT hr = pManager->CreateIntrinsicObject(ObjectPropertyAccessor, &vt_val,
+  HRESULT hr = p_manager->CreateIntrinsicObject(ObjectPropertyAccessor, &vt_val,
                                                pp_property_object);
   return hr;
 }
@@ -95,21 +95,21 @@ HRESULT CreateString(std::u16string value, IModelObject** pp_val) {
 
 bool GetModelAtIndex(winrt::com_ptr<IModelObject>& sp_parent,
                      winrt::com_ptr<IModelObject>& sp_index,
-                     IModelObject** pResult) {
+                     IModelObject** p_result) {
   winrt::com_ptr<IIndexableConcept> sp_indexable_concept;
   HRESULT hr = sp_parent->GetConcept(
       __uuidof(IIndexableConcept),
       reinterpret_cast<IUnknown**>(sp_indexable_concept.put()), nullptr);
   if (FAILED(hr)) return false;
 
-  std::vector<IModelObject*> pIndexers{sp_index.get()};
-  hr = sp_indexable_concept->GetAt(sp_parent.get(), 1, pIndexers.data(), pResult,
+  std::vector<IModelObject*> p_indexers{sp_index.get()};
+  hr = sp_indexable_concept->GetAt(sp_parent.get(), 1, p_indexers.data(), p_result,
                                  nullptr);
   return SUCCEEDED(hr);
 }
 
 bool GetCurrentThread(winrt::com_ptr<IDebugHostContext>& sp_host_context,
-                      IModelObject** pCurrentThread) {
+                      IModelObject** p_current_thread) {
   HRESULT hr = S_OK;
   winrt::com_ptr<IModelObject> sp_boxed_context, sp_root_namespace;
   winrt::com_ptr<IModelObject> sp_debugger, sp_sessions, sp_processes, sp_threads;
@@ -143,6 +143,6 @@ bool GetCurrentThread(winrt::com_ptr<IDebugHostContext>& sp_host_context,
   if (!GetModelAtIndex(sp_threads, sp_boxed_context, sp_curr_thread.put())) {
     return false;
   }
-  *pCurrentThread = sp_curr_thread.detach();
+  *p_current_thread = sp_curr_thread.detach();
   return true;
 }

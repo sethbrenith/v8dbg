@@ -98,7 +98,7 @@ HRESULT GetCurrentIsolate(winrt::com_ptr<IModelObject>& sp_result) {
   return S_OK;
 }
 
-HRESULT __stdcall CurrIsolateAlias::Call(IModelObject* pContextObject,
+HRESULT __stdcall CurrIsolateAlias::Call(IModelObject* p_context_object,
                                          ULONG64 arg_count,
                                          IModelObject** pp_arguments,
                                          IModelObject** pp_result,

@@ -13,12 +13,12 @@
 #include <string>
 
 struct MyOutput : IDebugOutputCallbacks {
-  MyOutput(winrt::com_ptr<IDebugClient5> pClient) : pClient(pClient) {
-    HRESULT hr = pClient->SetOutputCallbacks(this);
+  MyOutput(winrt::com_ptr<IDebugClient5> p_client) : p_client(p_client) {
+    HRESULT hr = p_client->SetOutputCallbacks(this);
     winrt::check_hresult(hr);
   }
   ~MyOutput() {
-    pClient->SetOutputCallbacks(nullptr);
+    p_client->SetOutputCallbacks(nullptr);
   }
   MyOutput(const MyOutput&) = delete;
   MyOutput& operator=(const MyOutput&) = delete;
@@ -37,7 +37,7 @@ struct MyOutput : IDebugOutputCallbacks {
     return S_OK;
   }
 
-  winrt::com_ptr<IDebugClient5> pClient;
+  winrt::com_ptr<IDebugClient5> p_client;
   std::string log;
 };
 

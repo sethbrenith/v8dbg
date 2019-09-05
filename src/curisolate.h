@@ -11,7 +11,7 @@ int GetIsolateKey(winrt::com_ptr<IDebugHostContext>& sp_ctx);
 HRESULT GetCurrentIsolate(winrt::com_ptr<IModelObject>& sp_result);
 
 struct CurrIsolateAlias : winrt::implements<CurrIsolateAlias, IModelMethod> {
-  HRESULT __stdcall Call(IModelObject* pContextObject, ULONG64 arg_count,
+  HRESULT __stdcall Call(IModelObject* p_context_object, ULONG64 arg_count,
                          _In_reads_(arg_count) IModelObject** pp_arguments,
                          IModelObject** pp_result,
                          IKeyStore** pp_metadata) noexcept override;

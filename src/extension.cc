@@ -176,9 +176,9 @@ bool Extension::Initialize() {
   hr = sp_object_data_model->SetConcept(__uuidof(IStringDisplayableConcept),
                                      object_data_model.get(), nullptr);
   if (FAILED(hr)) return false;
-  auto iDynamic = object_data_model.as<IDynamicKeyProviderConcept>();
+  auto i_dynamic = object_data_model.as<IDynamicKeyProviderConcept>();
   hr = sp_object_data_model->SetConcept(__uuidof(IDynamicKeyProviderConcept),
-                                     iDynamic.get(), nullptr);
+                                     i_dynamic.get(), nullptr);
   if (FAILED(hr)) return false;
 
   // Parent the model for the type

@@ -4,7 +4,7 @@
 #include "v8.h"
 
 HRESULT V8LocalValueProperty::GetValue(PCWSTR pwsz_key,
-                                       IModelObject* pV8LocalInstance,
+                                       IModelObject* p_v8_local_instance,
                                        IModelObject** pp_value) {
   // Get the parametric type within v8::Local<*>
   // Set value to a pointer to an instance of this type.
@@ -13,7 +13,7 @@ HRESULT V8LocalValueProperty::GetValue(PCWSTR pwsz_key,
   if (ext == nullptr) return E_FAIL;
 
   winrt::com_ptr<IDebugHostType> sp_type;
-  HRESULT hr = pV8LocalInstance->GetTypeInfo(sp_type.put());
+  HRESULT hr = p_v8_local_instance->GetTypeInfo(sp_type.put());
   if (FAILED(hr)) return hr;
 
   bool is_generic;
@@ -27,12 +27,12 @@ HRESULT V8LocalValueProperty::GetValue(PCWSTR pwsz_key,
   if (FAILED(hr)) return hr;
 
   winrt::com_ptr<IDebugHostContext> sp_ctx;
-  hr = pV8LocalInstance->GetContext(sp_ctx.put());
+  hr = p_v8_local_instance->GetContext(sp_ctx.put());
   if (FAILED(hr)) return hr;
   winrt::com_ptr<IDebugHostType> sp_v8_object_type = Extension::current_extension->GetV8ObjectType(sp_ctx);
 
   Location loc;
-  hr = pV8LocalInstance->GetLocation(&loc);
+  hr = p_v8_local_instance->GetLocation(&loc);
   if (FAILED(hr)) return hr;
 
   // Read the pointer at the Object location

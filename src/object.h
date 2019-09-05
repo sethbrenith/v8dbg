@@ -14,25 +14,25 @@ struct __declspec(uuid("6392E072-37BB-4220-A5FF-114098923A02")) IV8CachedObject:
 };
 
 struct V8CachedObject: winrt::implements<V8CachedObject, IV8CachedObject> {
-  V8CachedObject(IModelObject* pV8ObjectInstance) {
+  V8CachedObject(IModelObject* p_v8_object_instance) {
     Location loc;
-    HRESULT hr = pV8ObjectInstance->GetLocation(&loc);
+    HRESULT hr = p_v8_object_instance->GetLocation(&loc);
     if(FAILED(hr)) return; // TODO error handling
 
     winrt::com_ptr<IDebugHostContext> sp_context;
-    hr = pV8ObjectInstance->GetContext(sp_context.put());
+    hr = p_v8_object_instance->GetContext(sp_context.put());
     if (FAILED(hr)) return;
 
-    auto mem_reader = [&sp_context](uint64_t address, size_t size, uint8_t *pBuffer) {
+    auto mem_reader = [&sp_context](uint64_t address, size_t size, uint8_t *p_buffer) {
       ULONG64 bytes_read;
       Location loc{address};
-      HRESULT hr = Extension::current_extension->sp_debug_host_memory->ReadBytes(sp_context.get(), loc, pBuffer, size, &bytes_read);
+      HRESULT hr = Extension::current_extension->sp_debug_host_memory->ReadBytes(sp_context.get(), loc, p_buffer, size, &bytes_read);
       return SUCCEEDED(hr);
     };
 
     winrt::com_ptr<IDebugHostType> sp_type;
     _bstr_t type_name;
-    bool compressed_pointer = SUCCEEDED(pV8ObjectInstance->GetTypeInfo(sp_type.put()))
+    bool compressed_pointer = SUCCEEDED(p_v8_object_instance->GetTypeInfo(sp_type.put()))
         && SUCCEEDED(sp_type->GetName(type_name.GetAddress()))
         && static_cast<wchar_t*>(type_name) == std::wstring(L"v8::internal::TaggedValue");
 
@@ -73,12 +73,12 @@ struct V8ObjectKeyEnumerator: winrt::implements<V8ObjectKeyEnumerator, IKeyEnume
       IKeyStore** metadata
   ) noexcept override
   {
-    V8HeapObject *pV8HeapObject;
-    HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&pV8HeapObject);
+    V8HeapObject *p_v8_heap_object;
+    HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&p_v8_heap_object);
 
-    if (index >= pV8HeapObject->properties.size()) return E_BOUNDS;
+    if (index >= p_v8_heap_object->properties.size()) return E_BOUNDS;
 
-    auto name_ptr = pV8HeapObject->properties[index].name.c_str();
+    auto name_ptr = p_v8_heap_object->properties[index].name.c_str();
     *key = ::SysAllocString(U16ToWChar(name_ptr));
     ++index;
     return S_OK;
@@ -147,11 +147,11 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
     ) noexcept override
     {
       winrt::com_ptr<IV8CachedObject> sp_v8_cached_object = GetCachedObject(context_object);
-      V8HeapObject* pV8HeapObject;
-      HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&pV8HeapObject);
-      if (pV8HeapObject && pV8HeapObject->friendly_name.size() > 0) {
-        auto trunc_name = pV8HeapObject->friendly_name.substr(0, 42);
-        if (pV8HeapObject->friendly_name.size() > 42) trunc_name += u"...";
+      V8HeapObject* p_v8_heap_object;
+      HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&p_v8_heap_object);
+      if (p_v8_heap_object && p_v8_heap_object->friendly_name.size() > 0) {
+        auto trunc_name = p_v8_heap_object->friendly_name.substr(0, 42);
+        if (p_v8_heap_object->friendly_name.size() > 42) trunc_name += u"...";
         *display_string = ::SysAllocString(reinterpret_cast<wchar_t*>(trunc_name.data()));
       } else {
         *display_string = ::SysAllocString(L"<V8 Object>");
@@ -169,16 +169,16 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
     ) noexcept override
     {
       winrt::com_ptr<IV8CachedObject> sp_v8_cached_object = GetCachedObject(context_object);
-      V8HeapObject* pV8HeapObject;
-      HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&pV8HeapObject);
+      V8HeapObject* p_v8_heap_object;
+      HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&p_v8_heap_object);
 
       *has_key = false;
-      for(auto &k: pV8HeapObject->properties) {
+      for(auto &k: p_v8_heap_object->properties) {
         winrt::com_ptr<IDebugHostType> sp_v8_object;
         winrt::com_ptr<IDebugHostContext> sp_ctx;
 
-        const char16_t *pKey = reinterpret_cast<const char16_t*>(key);
-        if (k.name.compare(pKey) == 0) {
+        const char16_t *p_key = reinterpret_cast<const char16_t*>(key);
+        if (k.name.compare(p_key) == 0) {
           *has_key = true;
           if(key_value != nullptr) {
             winrt::com_ptr<IModelObject> sp_value;
@@ -239,13 +239,13 @@ struct V8LocalValueProperty: winrt::implements<V8LocalValueProperty, IModelPrope
 {
     HRESULT __stdcall GetValue(
         PCWSTR pwsz_key,
-        IModelObject *pV8ObjectInstance,
+        IModelObject *p_v8_object_instance,
         IModelObject **pp_value);
 
     HRESULT __stdcall SetValue(
         PCWSTR /*pwsz_key*/,
-        IModelObject * /*pProcessInstance*/,
-        IModelObject * /*pValue*/)
+        IModelObject * /*p_process_instance*/,
+        IModelObject * /*p_value*/)
     {
         return E_NOTIMPL;
     }
