@@ -11,7 +11,7 @@ extension instance.
 ## Hard-coded prerequisites
 
 This is not yet ready for easy consumption. It includes the following hard-coded
-paths, which you will need to update in the code (main.cpp and runtests.bat) to
+paths, which you will need to update in the code (main.cc and runtests.bat) to
 point to the appropriate location on your machine.
 
 * A V8 output directory, where you have built at least the targets `d8` and

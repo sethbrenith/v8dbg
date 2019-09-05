@@ -2,12 +2,12 @@
 
 This extension is layed out as follows:
 
-- The `v8.{cpp,h}` files in this directory interoperate with the V8 postmortem
+- The `v8.{cc,h}` files in this directory interoperate with the V8 postmortem
   debugging API. This is written to only depend on the standard library.
-- The `object.{cpp,h}` files in this directory provide the integration
+- The `object.{cc,h}` files in this directory provide the integration
   between the WinDbg specific APIs and the generic V8 source files. This code
   can read raw bytes in memory and return WinDbg representations of objects.
-- The `extension.{cpp,h}` files in this directory provide implementations for
+- The `extension.{cc,h}` files in this directory provide implementations for
   the CreateExtension and DestroyExtension methods the generic extension files
   in the root directory require, and provide the integration with the above
   source.
@@ -18,8 +18,8 @@ it will call a property getter. That getter can return a "synthetic object"
 which may contain other properties and types. These properties are typically
 "boxed" VARIANTs, such as BSTR, UI4, etc.
 
-The model/property getting should be implemented in extension.cpp, and should
-ask `object.cpp` to get for example "v8::internal::HeapObject" at address
+The model/property getting should be implemented in extension.cc, and should
+ask `object.cc` to get for example "v8::internal::HeapObject" at address
 0x0100.
 
 Object will then ask V8 for a representation, which will look-up the type in
