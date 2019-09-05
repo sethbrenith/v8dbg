@@ -21,24 +21,24 @@ enum class PropertyType {
 };
 
 struct Property {
-  Property(std::u16string propertyName, int value)
-      : name(propertyName), smiValue(value), type(PropertyType::Smi) {}
-  Property(std::u16string propertyName, std::u16string value)
-      : name(propertyName), strValue(value), type(PropertyType::String) {}
+  Property(std::u16string property_name, int value)
+      : name(property_name), smi_value(value), type(PropertyType::Smi) {}
+  Property(std::u16string property_name, std::u16string value)
+      : name(property_name), str_value(value), type(PropertyType::String) {}
 
   std::u16string name;
   PropertyType type;
 
-  // strValue is used if the type is String or Object
-  // A NativeObject will have its type in strValue, and pointer in addrValue
-  std::u16string strValue;
+  // str_value is used if the type is String or Object
+  // A NativeObject will have its type in str_value, and pointer in addr_value
+  std::u16string str_value;
 
   union {
-    int smiValue;
-    uint32_t uintValue;
-    double numValue;
-    bool boolValue;
-    uint64_t addrValue;
+    int smi_value;
+    uint32_t uint_value;
+    double num_value;
+    bool bool_value;
+    uint64_t addr_value;
   };
 
   size_t length = 0; // Only relevant for TaggedPtrArray
@@ -51,4 +51,4 @@ struct V8HeapObject {
   std::vector<Property> Properties;
 };
 
-V8HeapObject GetHeapObject(MemReader memReader, uint64_t address, uint64_t referringPointer);
+V8HeapObject GetHeapObject(MemReader mem_reader, uint64_t address, uint64_t referring_pointer);

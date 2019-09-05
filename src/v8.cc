@@ -47,31 +47,31 @@ std::u16string WidenString(const char* data) {
   return stream.str();
 }
 
-V8HeapObject GetHeapObject(MemReader memReader, uint64_t taggedPtr, uint64_t referringPointer) {
+V8HeapObject GetHeapObject(MemReader mem_reader, uint64_t tagged_ptr, uint64_t referring_pointer) {
   // Read the value at the address, and see if it is a tagged pointer
 
   V8HeapObject obj;
-  MemReaderScope reader_scope(memReader);
+  MemReaderScope reader_scope(mem_reader);
 
   d::Roots heap_roots = {0};
   // TODO ideally we'd provide real roots here. For now, just testing
   // decompression based on the pointer to wherever we found this value, which
   // is likely (though not guaranteed) to be a heap pointer itself.
-  heap_roots.any_heap_pointer = referringPointer;
-  auto props = d::GetObjectProperties(taggedPtr, reader_scope.GetReader(), heap_roots);
+  heap_roots.any_heap_pointer = referring_pointer;
+  auto props = d::GetObjectProperties(tagged_ptr, reader_scope.GetReader(), heap_roots);
   obj.FriendlyName = WidenString(props->brief);
-  for (int propertyIndex = 0; propertyIndex < props->num_properties; ++propertyIndex) {
-    const auto& sourceProp = *props->properties[propertyIndex];
-    //printf("%s: %s: %llx\n", sourceProp.name, sourceProp.type, sourceProp.values[0].value);
-    Property destProp(WidenString(sourceProp.name), WidenString(sourceProp.type));
-    destProp.type = PropertyType::TaggedPtr;
-    if (sourceProp.kind != d::PropertyKind::kSingle) {
-      destProp.type = PropertyType::TaggedPtrArray;
+  for (int property_index = 0; property_index < props->num_properties; ++property_index) {
+    const auto& source_prop = *props->properties[property_index];
+    //printf("%s: %s: %llx\n", source_prop.name, source_prop.type, source_prop.values[0].value);
+    Property dest_prop(WidenString(source_prop.name), WidenString(source_prop.type));
+    dest_prop.type = PropertyType::TaggedPtr;
+    if (source_prop.kind != d::PropertyKind::kSingle) {
+      dest_prop.type = PropertyType::TaggedPtrArray;
     }
-    destProp.addrValue = sourceProp.address;
-    destProp.length = sourceProp.num_values;
+    dest_prop.addr_value = source_prop.address;
+    dest_prop.length = source_prop.num_values;
     // TODO indexed values
-    obj.Properties.push_back(destProp);
+    obj.Properties.push_back(dest_prop);
   }
 
   return obj;

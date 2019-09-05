@@ -10,7 +10,7 @@
 // The representation of the underlying V8 object that will be cached on the
 // DataModel representation. (Needs to implement IUnknown).
 struct __declspec(uuid("6392E072-37BB-4220-A5FF-114098923A02")) IV8CachedObject: IUnknown {
-  virtual HRESULT __stdcall GetCachedV8HeapObject(V8HeapObject** ppHeapObject) = 0;
+  virtual HRESULT __stdcall GetCachedV8HeapObject(V8HeapObject** pp_heap_object) = 0;
 };
 
 struct V8CachedObject: winrt::implements<V8CachedObject, IV8CachedObject> {
@@ -19,44 +19,44 @@ struct V8CachedObject: winrt::implements<V8CachedObject, IV8CachedObject> {
     HRESULT hr = pV8ObjectInstance->GetLocation(&loc);
     if(FAILED(hr)) return; // TODO error handling
 
-    winrt::com_ptr<IDebugHostContext> spContext;
-    hr = pV8ObjectInstance->GetContext(spContext.put());
+    winrt::com_ptr<IDebugHostContext> sp_context;
+    hr = pV8ObjectInstance->GetContext(sp_context.put());
     if (FAILED(hr)) return;
 
-    auto memReader = [&spContext](uint64_t address, size_t size, uint8_t *pBuffer) {
+    auto mem_reader = [&sp_context](uint64_t address, size_t size, uint8_t *pBuffer) {
       ULONG64 bytes_read;
       Location loc{address};
-      HRESULT hr = Extension::currentExtension->spDebugHostMemory->ReadBytes(spContext.get(), loc, pBuffer, size, &bytes_read);
+      HRESULT hr = Extension::current_extension->sp_debug_host_memory->ReadBytes(sp_context.get(), loc, pBuffer, size, &bytes_read);
       return SUCCEEDED(hr);
     };
 
-    winrt::com_ptr<IDebugHostType> spType;
+    winrt::com_ptr<IDebugHostType> sp_type;
     _bstr_t type_name;
-    bool compressed_pointer = SUCCEEDED(pV8ObjectInstance->GetTypeInfo(spType.put()))
-        && SUCCEEDED(spType->GetName(type_name.GetAddress()))
+    bool compressed_pointer = SUCCEEDED(pV8ObjectInstance->GetTypeInfo(sp_type.put()))
+        && SUCCEEDED(sp_type->GetName(type_name.GetAddress()))
         && static_cast<wchar_t*>(type_name) == std::wstring(L"v8::internal::TaggedValue");
 
-    uint64_t taggedPtr;
-    Extension::currentExtension->spDebugHostMemory->ReadPointers(spContext.get(), loc, 1, &taggedPtr);
-    if (compressed_pointer) taggedPtr = static_cast<uint32_t>(taggedPtr);
-    heapObject = ::GetHeapObject(memReader, taggedPtr, loc.GetOffset());
+    uint64_t tagged_ptr;
+    Extension::current_extension->sp_debug_host_memory->ReadPointers(sp_context.get(), loc, 1, &tagged_ptr);
+    if (compressed_pointer) tagged_ptr = static_cast<uint32_t>(tagged_ptr);
+    heap_object = ::GetHeapObject(mem_reader, tagged_ptr, loc.GetOffset());
   }
 
-  V8HeapObject heapObject;
+  V8HeapObject heap_object;
 
-  HRESULT __stdcall GetCachedV8HeapObject(V8HeapObject** ppHeapObject) noexcept override {
-    *ppHeapObject = &this->heapObject;
+  HRESULT __stdcall GetCachedV8HeapObject(V8HeapObject** pp_heap_object) noexcept override {
+    *pp_heap_object = &this->heap_object;
     return S_OK;
   }
 };
 
 struct V8ObjectKeyEnumerator: winrt::implements<V8ObjectKeyEnumerator, IKeyEnumerator>
 {
-  V8ObjectKeyEnumerator(winrt::com_ptr<IV8CachedObject> &v8CachedObject)
-      :spV8CachedObject{v8CachedObject} {}
+  V8ObjectKeyEnumerator(winrt::com_ptr<IV8CachedObject> &v8_cached_object)
+      :sp_v8_cached_object{v8_cached_object} {}
 
   int index = 0;
-  winrt::com_ptr<IV8CachedObject> spV8CachedObject;
+  winrt::com_ptr<IV8CachedObject> sp_v8_cached_object;
 
   HRESULT __stdcall Reset() noexcept override
   {
@@ -74,12 +74,12 @@ struct V8ObjectKeyEnumerator: winrt::implements<V8ObjectKeyEnumerator, IKeyEnume
   ) noexcept override
   {
     V8HeapObject *pV8HeapObject;
-    HRESULT hr = spV8CachedObject->GetCachedV8HeapObject(&pV8HeapObject);
+    HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&pV8HeapObject);
 
     if (index >= pV8HeapObject->Properties.size()) return E_BOUNDS;
 
-    auto namePtr = pV8HeapObject->Properties[index].name.c_str();
-    *key = ::SysAllocString(U16ToWChar(namePtr));
+    auto name_ptr = pV8HeapObject->Properties[index].name.c_str();
+    *key = ::SysAllocString(U16ToWChar(name_ptr));
     ++index;
     return S_OK;
   }
@@ -87,15 +87,15 @@ struct V8ObjectKeyEnumerator: winrt::implements<V8ObjectKeyEnumerator, IKeyEnume
 
 struct V8LocalDataModel: winrt::implements<V8LocalDataModel, IDataModelConcept> {
     HRESULT __stdcall InitializeObject(
-        IModelObject* modelObject,
-        IDebugHostTypeSignature* matchingTypeSignature,
-        IDebugHostSymbolEnumerator* wildcardMatches
+        IModelObject* model_object,
+        IDebugHostTypeSignature* matching_type_signature,
+        IDebugHostSymbolEnumerator* wildcard_matches
     ) noexcept override
     {
         return S_OK;
     }
 
-    HRESULT __stdcall GetName( BSTR* modelName) noexcept override
+    HRESULT __stdcall GetName( BSTR* model_name) noexcept override
     {
         return E_NOTIMPL;
     }
@@ -103,109 +103,109 @@ struct V8LocalDataModel: winrt::implements<V8LocalDataModel, IDataModelConcept> 
 
 struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept, IStringDisplayableConcept, IDynamicKeyProviderConcept>
 {
-    winrt::com_ptr<IV8CachedObject> GetCachedObject(IModelObject* contextObject) {
+    winrt::com_ptr<IV8CachedObject> GetCachedObject(IModelObject* context_object) {
       // Get the IModelObject for this parent object. As it is a dynamic provider,
       // there is only one parent directly on the object.
-      winrt::com_ptr<IModelObject> spParentModel, spContextAdjuster;
-      HRESULT hr = contextObject->GetParentModel(0, spParentModel.put(), spContextAdjuster.put());
+      winrt::com_ptr<IModelObject> sp_parent_model, sp_context_adjuster;
+      HRESULT hr = context_object->GetParentModel(0, sp_parent_model.put(), sp_context_adjuster.put());
 
       // See if the cached object is already present
-      winrt::com_ptr<IUnknown> spContext;
-      hr = contextObject->GetContextForDataModel(spParentModel.get(), spContext.put());
+      winrt::com_ptr<IUnknown> sp_context;
+      hr = context_object->GetContextForDataModel(sp_parent_model.get(), sp_context.put());
 
-      winrt::com_ptr<IV8CachedObject> spV8CachedObject;
+      winrt::com_ptr<IV8CachedObject> sp_v8_cached_object;
 
       if(SUCCEEDED(hr)) {
-        spV8CachedObject = spContext.as<IV8CachedObject>();
+        sp_v8_cached_object = sp_context.as<IV8CachedObject>();
       } else {
-        spV8CachedObject = winrt::make<V8CachedObject>(contextObject);
-        spV8CachedObject.as(spContext);
-        contextObject->SetContextForDataModel(spParentModel.get(), spContext.get());
+        sp_v8_cached_object = winrt::make<V8CachedObject>(context_object);
+        sp_v8_cached_object.as(sp_context);
+        context_object->SetContextForDataModel(sp_parent_model.get(), sp_context.get());
       }
 
-      return spV8CachedObject;
+      return sp_v8_cached_object;
     }
 
     HRESULT __stdcall InitializeObject(
-        IModelObject* modelObject,
-        IDebugHostTypeSignature* matchingTypeSignature,
-        IDebugHostSymbolEnumerator* wildcardMatches
+        IModelObject* model_object,
+        IDebugHostTypeSignature* matching_type_signature,
+        IDebugHostSymbolEnumerator* wildcard_matches
     ) noexcept override
     {
         return S_OK;
     }
 
-    HRESULT __stdcall GetName( BSTR* modelName) noexcept override
+    HRESULT __stdcall GetName( BSTR* model_name) noexcept override
     {
         return E_NOTIMPL;
     }
 
     HRESULT __stdcall ToDisplayString(
-        IModelObject* contextObject,
+        IModelObject* context_object,
         IKeyStore* metadata,
-        BSTR* displayString
+        BSTR* display_string
     ) noexcept override
     {
-      winrt::com_ptr<IV8CachedObject> spV8CachedObject = GetCachedObject(contextObject);
+      winrt::com_ptr<IV8CachedObject> sp_v8_cached_object = GetCachedObject(context_object);
       V8HeapObject* pV8HeapObject;
-      HRESULT hr = spV8CachedObject->GetCachedV8HeapObject(&pV8HeapObject);
+      HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&pV8HeapObject);
       if (pV8HeapObject && pV8HeapObject->FriendlyName.size() > 0) {
-        auto truncName = pV8HeapObject->FriendlyName.substr(0, 42);
-        if (pV8HeapObject->FriendlyName.size() > 42) truncName += u"...";
-        *displayString = ::SysAllocString(reinterpret_cast<wchar_t*>(truncName.data()));
+        auto trunc_name = pV8HeapObject->FriendlyName.substr(0, 42);
+        if (pV8HeapObject->FriendlyName.size() > 42) trunc_name += u"...";
+        *display_string = ::SysAllocString(reinterpret_cast<wchar_t*>(trunc_name.data()));
       } else {
-        *displayString = ::SysAllocString(L"<V8 Object>");
+        *display_string = ::SysAllocString(L"<V8 Object>");
       }
       return S_OK;
     }
 
     // IDynamicKeyProviderConcept
     HRESULT __stdcall GetKey(
-        IModelObject *contextObject,
+        IModelObject *context_object,
         PCWSTR key,
-        IModelObject** keyValue,
+        IModelObject** key_value,
         IKeyStore** metadata,
-        bool *hasKey
+        bool *has_key
     ) noexcept override
     {
-      winrt::com_ptr<IV8CachedObject> spV8CachedObject = GetCachedObject(contextObject);
+      winrt::com_ptr<IV8CachedObject> sp_v8_cached_object = GetCachedObject(context_object);
       V8HeapObject* pV8HeapObject;
-      HRESULT hr = spV8CachedObject->GetCachedV8HeapObject(&pV8HeapObject);
+      HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&pV8HeapObject);
 
-      *hasKey = false;
+      *has_key = false;
       for(auto &k: pV8HeapObject->Properties) {
-        winrt::com_ptr<IDebugHostType> spV8Object;
-        winrt::com_ptr<IDebugHostContext> spCtx;
+        winrt::com_ptr<IDebugHostType> sp_v8_object;
+        winrt::com_ptr<IDebugHostContext> sp_ctx;
 
         const char16_t *pKey = reinterpret_cast<const char16_t*>(key);
         if (k.name.compare(pKey) == 0) {
-          *hasKey = true;
-          if(keyValue != nullptr) {
-            winrt::com_ptr<IModelObject> spValue;
+          *has_key = true;
+          if(key_value != nullptr) {
+            winrt::com_ptr<IModelObject> sp_value;
             switch (k.type) {
               case PropertyType::Smi:
-                CreateInt32(k.smiValue, spValue.put());
-                *keyValue = spValue.detach();
+                CreateInt32(k.smi_value, sp_value.put());
+                *key_value = sp_value.detach();
                 break;
               case PropertyType::Address:
-                CreateULong64(k.addrValue, spValue.put());
-                *keyValue = spValue.detach();
+                CreateULong64(k.addr_value, sp_value.put());
+                *key_value = sp_value.detach();
                 break;
               case PropertyType::String:
-                CreateString(k.strValue, spValue.put());
-                *keyValue = spValue.detach();
+                CreateString(k.str_value, sp_value.put());
+                *key_value = sp_value.detach();
                 break;
               case PropertyType::UInt:
-                CreateUInt32(k.uintValue, spValue.put());
-                *keyValue = spValue.detach();
+                CreateUInt32(k.uint_value, sp_value.put());
+                *key_value = sp_value.detach();
                 break;
               case PropertyType::Bool:
-                CreateBool(k.boolValue, spValue.put());
-                *keyValue = spValue.detach();
+                CreateBool(k.bool_value, sp_value.put());
+                *key_value = sp_value.detach();
                 break;
               case PropertyType::Number:
-                CreateNumber(k.numValue, spValue.put());
-                *keyValue = spValue.detach();
+                CreateNumber(k.num_value, sp_value.put());
+                *key_value = sp_value.detach();
                 break;
               case PropertyType::TaggedPtr:
               case PropertyType::TaggedPtrArray:
@@ -213,23 +213,23 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
                 // somehow keep its uncompressed type? That would let us supply
                 // a type hint on subsequent calls, which is good for working in
                 // partial dumps.
-                hr = contextObject->GetContext(spCtx.put());
+                hr = context_object->GetContext(sp_ctx.put());
                 if (FAILED(hr)) return hr;
-                spV8Object = Extension::currentExtension->GetV8ObjectType(spCtx, k.strValue.c_str());
-                if (spV8Object == nullptr) return E_FAIL;
+                sp_v8_object = Extension::current_extension->GetV8ObjectType(sp_ctx, k.str_value.c_str());
+                if (sp_v8_object == nullptr) return E_FAIL;
 
                 if (k.type == PropertyType::TaggedPtrArray) {
-                  ULONG64 objectSize{};
-                  spV8Object->GetSize(&objectSize);
-                  ArrayDimension dimensions[] = {{/*start=*/0, /*length=*/k.length, /*stride=*/objectSize}};
-                  winrt::com_ptr<IDebugHostType> spV8ObjectArray;
-                  spV8Object->CreateArrayOf(/*dimensions=*/1, dimensions, spV8ObjectArray.put());
-                  spV8Object = spV8ObjectArray;
+                  ULONG64 object_size{};
+                  sp_v8_object->GetSize(&object_size);
+                  ArrayDimension dimensions[] = {{/*start=*/0, /*length=*/k.length, /*stride=*/object_size}};
+                  winrt::com_ptr<IDebugHostType> sp_v8_object_array;
+                  sp_v8_object->CreateArrayOf(/*dimensions=*/1, dimensions, sp_v8_object_array.put());
+                  sp_v8_object = sp_v8_object_array;
                 }
 
-                spDataModelManager->CreateTypedObject(spCtx.get(), Location{k.addrValue},
-                    spV8Object.get(), spValue.put());
-                *keyValue = spValue.detach();
+                sp_data_model_manager->CreateTypedObject(sp_ctx.get(), Location{k.addr_value},
+                    sp_v8_object.get(), sp_value.put());
+                *key_value = sp_value.detach();
                 break;
               // TODO: Other types (e.g. nested objects)
               default:
@@ -245,9 +245,9 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
     }
 
     HRESULT __stdcall SetKey(
-        IModelObject *contextObject,
+        IModelObject *context_object,
         PCWSTR key,
-        IModelObject *keyValue,
+        IModelObject *key_value,
         IKeyStore *metadata
     ) noexcept override
     {
@@ -255,14 +255,14 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
     }
 
     HRESULT __stdcall EnumerateKeys(
-        IModelObject *contextObject,
-        IKeyEnumerator **ppEnumerator
+        IModelObject *context_object,
+        IKeyEnumerator **pp_enumerator
     ) noexcept override
     {
-      auto spV8CachedObject = GetCachedObject(contextObject);
+      auto sp_v8_cached_object = GetCachedObject(context_object);
 
-      auto enumerator{ winrt::make<V8ObjectKeyEnumerator>(spV8CachedObject)};
-      *ppEnumerator = enumerator.detach();
+      auto enumerator{ winrt::make<V8ObjectKeyEnumerator>(sp_v8_cached_object)};
+      *pp_enumerator = enumerator.detach();
       return S_OK;
     }
 };
@@ -270,12 +270,12 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
 struct V8LocalValueProperty: winrt::implements<V8LocalValueProperty, IModelPropertyAccessor>
 {
     HRESULT __stdcall GetValue(
-        PCWSTR pwszKey,
+        PCWSTR pwsz_key,
         IModelObject *pV8ObjectInstance,
-        IModelObject **ppValue);
+        IModelObject **pp_value);
 
     HRESULT __stdcall SetValue(
-        PCWSTR /*pwszKey*/,
+        PCWSTR /*pwsz_key*/,
         IModelObject * /*pProcessInstance*/,
         IModelObject * /*pValue*/)
     {

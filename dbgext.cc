@@ -3,11 +3,11 @@
 
 // See https://docs.microsoft.com/en-us/visualstudio/debugger/crt-debugging-techniques
 // for the memory leak and debugger reporting macros used from <crtdbg.h>
-_CrtMemState memOld, memNew, memDiff;
+_CrtMemState mem_old, mem_new, mem_diff;
 
-winrt::com_ptr<IDataModelManager> spDataModelManager;
-winrt::com_ptr<IDebugHost> spDebugHost;
-winrt::com_ptr<IDebugControl5> spDebugControl;
+winrt::com_ptr<IDataModelManager> sp_data_model_manager;
+winrt::com_ptr<IDebugHost> sp_debug_host;
+winrt::com_ptr<IDebugControl5> sp_debug_control;
 
 extern "C" {
 
@@ -15,19 +15,19 @@ __declspec(dllexport) HRESULT
     __stdcall DebugExtensionInitialize(PULONG /*pVersion*/, PULONG /*pFlags*/) {
   _RPTF0(_CRT_WARN, "Entered DebugExtensionInitialize\n");
   _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-  _CrtMemCheckpoint(&memOld);
+  _CrtMemCheckpoint(&mem_old);
 
-  winrt::com_ptr<IDebugClient> spDebugClient;
-  winrt::com_ptr<IHostDataModelAccess> spDataModelAccess;
+  winrt::com_ptr<IDebugClient> sp_debug_client;
+  winrt::com_ptr<IHostDataModelAccess> sp_data_model_access;
 
-  HRESULT hr = DebugCreate(__uuidof(IDebugClient), spDebugClient.put_void());
+  HRESULT hr = DebugCreate(__uuidof(IDebugClient), sp_debug_client.put_void());
   if (FAILED(hr)) return E_FAIL;
 
-  if (!spDebugClient.try_as(spDataModelAccess)) return E_FAIL;
-  if (!spDebugClient.try_as(spDebugControl)) return E_FAIL;
+  if (!sp_debug_client.try_as(sp_data_model_access)) return E_FAIL;
+  if (!sp_debug_client.try_as(sp_debug_control)) return E_FAIL;
 
-  hr = spDataModelAccess->GetDataModel(spDataModelManager.put(),
-                                       spDebugHost.put());
+  hr = sp_data_model_access->GetDataModel(sp_data_model_manager.put(),
+                                       sp_debug_host.put());
   if (FAILED(hr)) return E_FAIL;
 
   return CreateExtension() ? S_OK : E_FAIL;
@@ -37,12 +37,12 @@ __declspec(dllexport) HRESULT
 __declspec(dllexport) void __stdcall DebugExtensionUninitialize() {
   _RPTF0(_CRT_WARN, "Entered DebugExtensionUninitialize\n");
   DestroyExtension();
-  spDebugHost = nullptr;
-  spDataModelManager = nullptr;
+  sp_debug_host = nullptr;
+  sp_data_model_manager = nullptr;
 
-  _CrtMemCheckpoint(&memNew);
-  if (_CrtMemDifference(&memDiff, &memOld, &memNew)) {
-    _CrtMemDumpStatistics(&memDiff);
+  _CrtMemCheckpoint(&mem_new);
+  if (_CrtMemDifference(&mem_diff, &mem_old, &mem_new)) {
+    _CrtMemDumpStatistics(&mem_diff);
   }
   if (_CrtDumpMemoryLeaks()) {
     _RPTF0(_CRT_ERROR, "Memory leaks detected!\n");

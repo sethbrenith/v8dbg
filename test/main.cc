@@ -15,23 +15,23 @@ class LoadExtensionScope {
  public:
   LoadExtensionScope(winrt::com_ptr<IDebugControl3> pDebugControl) :
       pDebugControl(pDebugControl) {
-    HRESULT hr = pDebugControl->AddExtension(v8dbg, 0, &extHandle);
+    HRESULT hr = pDebugControl->AddExtension(v8dbg, 0, &ext_handle);
     winrt::check_hresult(hr);
     // HACK: Below fails, but is required for the extension to actually
     // initialize. Just the AddExtension call doesn't actually load and
     // initialize it.
-    pDebugControl->CallExtension(extHandle, "Foo", "Bar");
+    pDebugControl->CallExtension(ext_handle, "Foo", "Bar");
   }
   ~LoadExtensionScope() {
     // Let the extension uninitialize so it can deallocate memory, meaning any
     // reported memory leaks should be real bugs.
-    pDebugControl->RemoveExtension(extHandle);
+    pDebugControl->RemoveExtension(ext_handle);
   }
  private:
   LoadExtensionScope(const LoadExtensionScope&) = delete;
   LoadExtensionScope& operator=(const LoadExtensionScope&) = delete;
   winrt::com_ptr<IDebugControl3> pDebugControl;
-  ULONG64 extHandle;
+  ULONG64 ext_handle;
 };
 
 void RunTests() {
@@ -60,11 +60,11 @@ void RunTests() {
   winrt::check_hresult(hr);
 
   // Launch the process with the debugger attached
-  DEBUG_CREATE_PROCESS_OPTIONS procOptions;
-  procOptions.CreateFlags = DEBUG_PROCESS;
-  procOptions.EngCreateFlags = 0;
-  procOptions.VerifierFlags = 0;
-  procOptions.Reserved = 0;
+  DEBUG_CREATE_PROCESS_OPTIONS proc_options;
+  proc_options.CreateFlags = DEBUG_PROCESS;
+  proc_options.EngCreateFlags = 0;
+  proc_options.VerifierFlags = 0;
+  proc_options.Reserved = 0;
   hr =
       pClient->CreateProcessW(0, const_cast<char*>(CommandLine), DEBUG_PROCESS);
   winrt::check_hresult(hr);
@@ -96,11 +96,11 @@ void RunTests() {
   hr = pDebugControl->WaitForEvent(0, INFINITE);
   winrt::check_hresult(hr);
 
-  ULONG type, procId, threadId, descUsed;
+  ULONG type, proc_id, thread_id, desc_used;
   byte desc[1024];
   hr = pDebugControl->GetLastEventInformation(
-      &type, &procId, &threadId, nullptr, 0, nullptr,
-      reinterpret_cast<PSTR>(desc), 1024, &descUsed);
+      &type, &proc_id, &thread_id, nullptr, 0, nullptr,
+      reinterpret_cast<PSTR>(desc), 1024, &desc_used);
   winrt::check_hresult(hr);
 
   LoadExtensionScope extension_loaded(pDebugControl);

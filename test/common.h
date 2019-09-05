@@ -56,9 +56,9 @@ struct MyCallback : IDebugEventCallbacks {
     return S_OK;
   }
   virtual HRESULT __stdcall Breakpoint(PDEBUG_BREAKPOINT Bp) override {
-    ULONG64 bpOffset;
-    winrt::check_hresult(Bp->GetOffset(&bpOffset));
-    // printf("Breakpoint hit at %llx\n", bpOffset);
+    ULONG64 bp_offset;
+    winrt::check_hresult(Bp->GetOffset(&bp_offset));
+    // printf("Breakpoint hit at %llx\n", bp_offset);
 
     // Break on breakpoints? Seems reasonable.
     return DEBUG_STATUS_BREAK;

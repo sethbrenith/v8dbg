@@ -7,12 +7,12 @@
 #include "extension.h"
 #include "v8.h"
 
-int GetIsolateKey(winrt::com_ptr<IDebugHostContext>& spCtx);
-HRESULT GetCurrentIsolate(winrt::com_ptr<IModelObject>& spResult);
+int GetIsolateKey(winrt::com_ptr<IDebugHostContext>& sp_ctx);
+HRESULT GetCurrentIsolate(winrt::com_ptr<IModelObject>& sp_result);
 
 struct CurrIsolateAlias : winrt::implements<CurrIsolateAlias, IModelMethod> {
-  HRESULT __stdcall Call(IModelObject* pContextObject, ULONG64 argCount,
-                         _In_reads_(argCount) IModelObject** ppArguments,
-                         IModelObject** ppResult,
-                         IKeyStore** ppMetadata) noexcept override;
+  HRESULT __stdcall Call(IModelObject* pContextObject, ULONG64 arg_count,
+                         _In_reads_(arg_count) IModelObject** pp_arguments,
+                         IModelObject** pp_result,
+                         IKeyStore** pp_metadata) noexcept override;
 };
