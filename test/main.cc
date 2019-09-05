@@ -14,24 +14,24 @@ const char* CommandLine =
 class LoadExtensionScope {
  public:
   LoadExtensionScope(winrt::com_ptr<IDebugControl3> p_debug_control) :
-      p_debug_control(p_debug_control) {
-    HRESULT hr = p_debug_control->AddExtension(v8dbg, 0, &ext_handle);
+      p_debug_control_(p_debug_control) {
+    HRESULT hr = p_debug_control->AddExtension(v8dbg, 0, &ext_handle_);
     winrt::check_hresult(hr);
     // HACK: Below fails, but is required for the extension to actually
     // initialize. Just the AddExtension call doesn't actually load and
     // initialize it.
-    p_debug_control->CallExtension(ext_handle, "Foo", "Bar");
+    p_debug_control->CallExtension(ext_handle_, "Foo", "Bar");
   }
   ~LoadExtensionScope() {
     // Let the extension uninitialize so it can deallocate memory, meaning any
     // reported memory leaks should be real bugs.
-    p_debug_control->RemoveExtension(ext_handle);
+    p_debug_control_->RemoveExtension(ext_handle_);
   }
  private:
   LoadExtensionScope(const LoadExtensionScope&) = delete;
   LoadExtensionScope& operator=(const LoadExtensionScope&) = delete;
-  winrt::com_ptr<IDebugControl3> p_debug_control;
-  ULONG64 ext_handle;
+  winrt::com_ptr<IDebugControl3> p_debug_control_;
+  ULONG64 ext_handle_;
 };
 
 void RunTests() {

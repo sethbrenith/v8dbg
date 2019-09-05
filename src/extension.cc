@@ -5,19 +5,19 @@
 #include "object.h"
 #include <iostream>
 
-Extension* Extension::current_extension = nullptr;
+Extension* Extension::current_extension_ = nullptr;
 const wchar_t *pcur_isolate = L"curisolate";
 const wchar_t *plist_chunks = L"listchunks";
 
 bool CreateExtension() {
   _RPTF0(_CRT_WARN, "Entered CreateExtension\n");
-  if (Extension::current_extension != nullptr || sp_data_model_manager == nullptr ||
+  if (Extension::current_extension_ != nullptr || sp_data_model_manager == nullptr ||
       sp_debug_host == nullptr) {
     return false;
   } else {
     Extension* new_extension = new (std::nothrow) Extension();
     if (new_extension && new_extension->Initialize()) {
-      Extension::current_extension = new_extension;
+      Extension::current_extension_ = new_extension;
       return true;
     } else {
       delete new_extension;
@@ -28,9 +28,9 @@ bool CreateExtension() {
 
 void DestroyExtension() {
   _RPTF0(_CRT_WARN, "Entered DestroyExtension\n");
-  if (Extension::current_extension != nullptr) {
-    delete Extension::current_extension;
-    Extension::current_extension = nullptr;
+  if (Extension::current_extension_ != nullptr) {
+    delete Extension::current_extension_;
+    Extension::current_extension_ = nullptr;
   }
   return;
 }
@@ -61,32 +61,32 @@ bool DoesTypeDeriveFromObject(winrt::com_ptr<IDebugHostType>& sp_type) {
 }
 
 void Extension::TryRegisterType(winrt::com_ptr<IDebugHostType>& sp_type, std::u16string type_name) {
-  auto insertion_result = registered_handler_types.insert({type_name, nullptr});
+  auto insertion_result = registered_handler_types_.insert({type_name, nullptr});
   if (!insertion_result.second) return;
   if (DoesTypeDeriveFromObject(sp_type)) {
     winrt::com_ptr<IDebugHostTypeSignature> sp_object_type_signature;
-    HRESULT hr = sp_debug_host_symbols->CreateTypeSignature(reinterpret_cast<const wchar_t*>(type_name.c_str()), nullptr,
+    HRESULT hr = sp_debug_host_symbols_->CreateTypeSignature(reinterpret_cast<const wchar_t*>(type_name.c_str()), nullptr,
                                             sp_object_type_signature.put());
     if (FAILED(hr)) return;
     hr = sp_data_model_manager->RegisterModelForTypeSignature(
-        sp_object_type_signature.get(), sp_object_data_model.get());
+        sp_object_type_signature.get(), sp_object_data_model_.get());
     insertion_result.first->second = sp_object_type_signature;
   }
 }
 
 winrt::com_ptr<IDebugHostType> Extension::GetV8ObjectType(winrt::com_ptr<IDebugHostContext>& sp_ctx, const char16_t* type_name) {
   bool is_equal;
-  if (sp_v8_module_ctx == nullptr || !SUCCEEDED(sp_v8_module_ctx->IsEqualTo(sp_ctx.get(), &is_equal)) || !is_equal) {
+  if (sp_v8_module_ctx_ == nullptr || !SUCCEEDED(sp_v8_module_ctx_->IsEqualTo(sp_ctx.get(), &is_equal)) || !is_equal) {
     // Context changed; clear the dictionary.
-    sp_v8_object_types.clear();
+    sp_v8_object_types_.clear();
   }
 
   GetV8Module(sp_ctx); // Will force the correct module to load
-  if (sp_v8_module == nullptr) return nullptr;
+  if (sp_v8_module_ == nullptr) return nullptr;
 
-  auto& dictionary_entry = sp_v8_object_types[type_name];
+  auto& dictionary_entry = sp_v8_object_types_[type_name];
   if (dictionary_entry == nullptr) {
-    HRESULT hr = sp_v8_module->FindTypeByName(reinterpret_cast<PCWSTR>(type_name), dictionary_entry.put());
+    HRESULT hr = sp_v8_module_->FindTypeByName(reinterpret_cast<PCWSTR>(type_name), dictionary_entry.put());
     if (SUCCEEDED(hr)) {
       // It's too slow to enumerate all types in the v8 module up front and
       // register type handlers for all of them, but we can opportunistically do
@@ -106,13 +106,13 @@ winrt::com_ptr<IDebugHostModule> Extension::GetV8Module(winrt::com_ptr<IDebugHos
   // So for now DON'T compare by context, but by proc_id. (An API is in progress
   // to compare by address space, which should be usable when shipped).
   /*
-  if (sp_v8_module != nullptr) {
+  if (sp_v8_module_ != nullptr) {
     bool is_equal;
-    if (SUCCEEDED(sp_v8_module_ctx->IsEqualTo(sp_ctx.get(), &is_equal)) && is_equal) {
-      return sp_v8_module;
+    if (SUCCEEDED(sp_v8_module_ctx_->IsEqualTo(sp_ctx.get(), &is_equal)) && is_equal) {
+      return sp_v8_module_;
     } else {
-      sp_v8_module = nullptr;
-      sp_v8_module_ctx = nullptr;
+      sp_v8_module_ = nullptr;
+      sp_v8_module_ctx_ = nullptr;
     }
   }
   */
@@ -121,13 +121,13 @@ winrt::com_ptr<IDebugHostModule> Extension::GetV8Module(winrt::com_ptr<IDebugHos
   if (sp_debug_control.try_as(sp_sys_objects))
   {
     if(SUCCEEDED(sp_sys_objects->GetCurrentProcessSystemId(&proc_id))) {
-      if (proc_id == v8_module_proc_id && sp_v8_module != nullptr) return sp_v8_module;
+      if (proc_id == v8_module_proc_id_ && sp_v8_module_ != nullptr) return sp_v8_module_;
     }
   }
 
   // Loop through the modules looking for the one that holds the "isolate_key_"
   winrt::com_ptr<IDebugHostSymbolEnumerator> sp_enum;
-  if (SUCCEEDED(sp_debug_host_symbols->EnumerateModules(sp_ctx.get(), sp_enum.put()))) {
+  if (SUCCEEDED(sp_debug_host_symbols_->EnumerateModules(sp_ctx.get(), sp_enum.put()))) {
     HRESULT hr = S_OK;
     while (true) {
       winrt::com_ptr<IDebugHostSymbol> sp_mod_sym;
@@ -142,9 +142,9 @@ winrt::com_ptr<IDebugHostModule> Extension::GetV8Module(winrt::com_ptr<IDebugHos
         // The below symbol is specific to the main V8 module
         hr = sp_module->FindSymbolByName(L"isolate_key_", sp_isolate_sym.put());
         if (SUCCEEDED(hr)) {
-          sp_v8_module = sp_module;
-          sp_v8_module_ctx = sp_ctx;
-          v8_module_proc_id = proc_id;
+          sp_v8_module_ = sp_module;
+          sp_v8_module_ctx_ = sp_ctx;
+          v8_module_proc_id_ = proc_id;
           // Output location
           BSTR module_name;
           if(SUCCEEDED(sp_module->GetImageName(true, &module_name))) {
@@ -158,59 +158,59 @@ winrt::com_ptr<IDebugHostModule> Extension::GetV8Module(winrt::com_ptr<IDebugHos
     }
   }
   // This will be the located module, or still nullptr if above fails
-  return sp_v8_module;
+  return sp_v8_module_;
 }
 
 bool Extension::Initialize() {
   _RPTF0(_CRT_WARN, "Entered ExtensionInitialize\n");
 
-  if (!sp_debug_host.try_as(sp_debug_host_memory)) return false;
-  if (!sp_debug_host.try_as(sp_debug_host_symbols)) return false;
-  if (!sp_debug_host.try_as(sp_debug_host_extensibility)) return false;
+  if (!sp_debug_host.try_as(sp_debug_host_memory_)) return false;
+  if (!sp_debug_host.try_as(sp_debug_host_symbols_)) return false;
+  if (!sp_debug_host.try_as(sp_debug_host_extensibility_)) return false;
 
   // Create an instance of the DataModel 'parent' for v8::internal::Object types
   auto object_data_model{winrt::make<V8ObjectDataModel>()};
   HRESULT hr = sp_data_model_manager->CreateDataModelObject(
-      object_data_model.get(), sp_object_data_model.put());
+      object_data_model.get(), sp_object_data_model_.put());
   if (FAILED(hr)) return false;
-  hr = sp_object_data_model->SetConcept(__uuidof(IStringDisplayableConcept),
+  hr = sp_object_data_model_->SetConcept(__uuidof(IStringDisplayableConcept),
                                      object_data_model.get(), nullptr);
   if (FAILED(hr)) return false;
   auto i_dynamic = object_data_model.as<IDynamicKeyProviderConcept>();
-  hr = sp_object_data_model->SetConcept(__uuidof(IDynamicKeyProviderConcept),
+  hr = sp_object_data_model_->SetConcept(__uuidof(IDynamicKeyProviderConcept),
                                      i_dynamic.get(), nullptr);
   if (FAILED(hr)) return false;
 
   // Parent the model for the type
   for (const char16_t* name : {u"v8::internal::Object", u"v8::internal::TaggedValue"}) {
     winrt::com_ptr<IDebugHostTypeSignature> sp_object_type_signature;
-    hr = sp_debug_host_symbols->CreateTypeSignature(reinterpret_cast<const wchar_t*>(name), nullptr,
+    hr = sp_debug_host_symbols_->CreateTypeSignature(reinterpret_cast<const wchar_t*>(name), nullptr,
                                             sp_object_type_signature.put());
     if (FAILED(hr)) return false;
     hr = sp_data_model_manager->RegisterModelForTypeSignature(
-        sp_object_type_signature.get(), sp_object_data_model.get());
-    registered_handler_types[name] = sp_object_type_signature;
+        sp_object_type_signature.get(), sp_object_data_model_.get());
+    registered_handler_types_[name] = sp_object_type_signature;
   }
 
   // Create an instance of the DataModel 'parent' class for v8::Local<*> types
   auto local_data_model{winrt::make<V8LocalDataModel>()};
   // Create an IModelObject out of it
   hr = sp_data_model_manager->CreateDataModelObject(local_data_model.get(),
-                                                 sp_local_data_model.put());
+                                                 sp_local_data_model_.put());
   if (FAILED(hr)) return false;
 
   // Create a type signature for the v8::Local symbol
-  hr = sp_debug_host_symbols->CreateTypeSignature(L"v8::Local<*>", nullptr,
-                                          sp_local_type_signature.put());
+  hr = sp_debug_host_symbols_->CreateTypeSignature(L"v8::Local<*>", nullptr,
+                                          sp_local_type_signature_.put());
   if (FAILED(hr)) return false;
-  hr = sp_debug_host_symbols->CreateTypeSignature(L"v8::MaybeLocal<*>", nullptr,
-                                          sp_maybe_local_type_signature.put());
+  hr = sp_debug_host_symbols_->CreateTypeSignature(L"v8::MaybeLocal<*>", nullptr,
+                                          sp_maybe_local_type_signature_.put());
   if (FAILED(hr)) return false;
-  hr = sp_debug_host_symbols->CreateTypeSignature(L"v8::internal::Handle<*>", nullptr,
-                                          sp_handle_type_signature.put());
+  hr = sp_debug_host_symbols_->CreateTypeSignature(L"v8::internal::Handle<*>", nullptr,
+                                          sp_handle_type_signature_.put());
   if (FAILED(hr)) return false;
-  hr = sp_debug_host_symbols->CreateTypeSignature(L"v8::internal::MaybeHandle<*>", nullptr,
-                                          sp_maybe_handle_type_signature.put());
+  hr = sp_debug_host_symbols_->CreateTypeSignature(L"v8::internal::MaybeHandle<*>", nullptr,
+                                          sp_maybe_handle_type_signature_.put());
   if (FAILED(hr)) return false;
 
   // Add the 'Value' property to the parent model.
@@ -218,17 +218,17 @@ bool Extension::Initialize() {
   winrt::com_ptr<IModelObject> sp_local_value_property_model;
   hr = CreateProperty(sp_data_model_manager.get(), local_value_property.get(),
                       sp_local_value_property_model.put());
-  hr = sp_local_data_model->SetKey(L"Value", sp_local_value_property_model.get(),
+  hr = sp_local_data_model_->SetKey(L"Value", sp_local_value_property_model.get(),
                                 nullptr);
   // Register the DataModel as the viewer for the type signature
   hr = sp_data_model_manager->RegisterModelForTypeSignature(
-      sp_local_type_signature.get(), sp_local_data_model.get());
+      sp_local_type_signature_.get(), sp_local_data_model_.get());
   hr = sp_data_model_manager->RegisterModelForTypeSignature(
-      sp_maybe_local_type_signature.get(), sp_local_data_model.get());
+      sp_maybe_local_type_signature_.get(), sp_local_data_model_.get());
   hr = sp_data_model_manager->RegisterModelForTypeSignature(
-      sp_handle_type_signature.get(), sp_local_data_model.get());
+      sp_handle_type_signature_.get(), sp_local_data_model_.get());
   hr = sp_data_model_manager->RegisterModelForTypeSignature(
-      sp_maybe_handle_type_signature.get(), sp_local_data_model.get());
+      sp_maybe_handle_type_signature_.get(), sp_local_data_model_.get());
 
   // Register the @$currisolate function alias.
   auto curr_isolate_function{winrt::make<CurrIsolateAlias>()};
@@ -239,9 +239,9 @@ bool Extension::Initialize() {
       static_cast<IModelMethod*>(curr_isolate_function.get());
 
   hr = sp_data_model_manager->CreateIntrinsicObject(
-      ObjectMethod, &vt_curr_isolate_function, sp_curr_isolate_model.put());
-  hr = sp_debug_host_extensibility->CreateFunctionAlias(pcur_isolate,
-                                                     sp_curr_isolate_model.get());
+      ObjectMethod, &vt_curr_isolate_function, sp_curr_isolate_model_.put());
+  hr = sp_debug_host_extensibility_->CreateFunctionAlias(pcur_isolate,
+                                                     sp_curr_isolate_model_.get());
 
   // Register the @$listchunks function alias.
   auto list_chunks_function{winrt::make<ListChunksAlias>()};
@@ -252,30 +252,30 @@ bool Extension::Initialize() {
       static_cast<IModelMethod*>(list_chunks_function.get());
 
   hr = sp_data_model_manager->CreateIntrinsicObject(
-      ObjectMethod, &vt_list_chunks_function, sp_list_chunks_model.put());
-  hr = sp_debug_host_extensibility->CreateFunctionAlias(plist_chunks,
-                                                     sp_list_chunks_model.get());
+      ObjectMethod, &vt_list_chunks_function, sp_list_chunks_model_.put());
+  hr = sp_debug_host_extensibility_->CreateFunctionAlias(plist_chunks,
+                                                     sp_list_chunks_model_.get());
 
   return !FAILED(hr);
 }
 
 Extension::~Extension() {
   _RPTF0(_CRT_WARN, "Entered Extension::~Extension\n");
-  sp_debug_host_extensibility->DestroyFunctionAlias(pcur_isolate);
-  sp_debug_host_extensibility->DestroyFunctionAlias(plist_chunks);
+  sp_debug_host_extensibility_->DestroyFunctionAlias(pcur_isolate);
+  sp_debug_host_extensibility_->DestroyFunctionAlias(plist_chunks);
 
-  for (const auto& registered : registered_handler_types) {
+  for (const auto& registered : registered_handler_types_) {
     if (registered.second != nullptr) {
       sp_data_model_manager->UnregisterModelForTypeSignature(
-          sp_object_data_model.get(), registered.second.get());
+          sp_object_data_model_.get(), registered.second.get());
     }
   }
   sp_data_model_manager->UnregisterModelForTypeSignature(
-      sp_local_data_model.get(), sp_local_type_signature.get());
+      sp_local_data_model_.get(), sp_local_type_signature_.get());
   sp_data_model_manager->UnregisterModelForTypeSignature(
-      sp_local_data_model.get(), sp_maybe_local_type_signature.get());
+      sp_local_data_model_.get(), sp_maybe_local_type_signature_.get());
   sp_data_model_manager->UnregisterModelForTypeSignature(
-      sp_local_data_model.get(), sp_handle_type_signature.get());
+      sp_local_data_model_.get(), sp_handle_type_signature_.get());
   sp_data_model_manager->UnregisterModelForTypeSignature(
-      sp_local_data_model.get(), sp_maybe_handle_type_signature.get());
+      sp_local_data_model_.get(), sp_maybe_handle_type_signature_.get());
 }

@@ -1,7 +1,7 @@
 #include "curisolate.h"
 
 int GetIsolateKey(winrt::com_ptr<IDebugHostContext>& sp_ctx) {
-  auto sp_v8_module = Extension::current_extension->GetV8Module(sp_ctx);
+  auto sp_v8_module = Extension::current_extension_->GetV8Module(sp_ctx);
   if (sp_v8_module == nullptr) return -1;
 
   winrt::com_ptr<IDebugHostSymbol> sp_isolate_sym;
@@ -19,7 +19,7 @@ int GetIsolateKey(winrt::com_ptr<IDebugHostContext>& sp_ctx) {
         if (SUCCEEDED(hr)) {
           int isolate_key;
           ULONG64 bytes_read;
-          hr = Extension::current_extension->sp_debug_host_memory->ReadBytes(
+          hr = Extension::current_extension_->sp_debug_host_memory_->ReadBytes(
               sp_ctx.get(), loc, &isolate_key, 4, &bytes_read);
           return isolate_key;
         }
@@ -85,7 +85,7 @@ HRESULT GetCurrentIsolate(winrt::com_ptr<IModelObject>& sp_result) {
   // If we got the isolate_key OK, then must have the V8 module loaded
   // Get the internal Isolate type from it
   winrt::com_ptr<IDebugHostType> sp_isolate_type, sp_isolate_ptr_type;
-  hr = Extension::current_extension->GetV8Module(sp_host_context)
+  hr = Extension::current_extension_->GetV8Module(sp_host_context)
            ->FindTypeByName(L"v8::internal::Isolate", sp_isolate_type.put());
   if (FAILED(hr)) return hr;
   hr = sp_isolate_type->CreatePointerTo(PointerStandard, sp_isolate_ptr_type.put());

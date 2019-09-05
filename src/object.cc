@@ -9,7 +9,7 @@ HRESULT V8LocalValueProperty::GetValue(PCWSTR pwsz_key,
   // Get the parametric type within v8::Local<*>
   // Set value to a pointer to an instance of this type.
 
-  auto ext = Extension::current_extension;
+  auto ext = Extension::current_extension_;
   if (ext == nullptr) return E_FAIL;
 
   winrt::com_ptr<IDebugHostType> sp_type;
@@ -29,7 +29,7 @@ HRESULT V8LocalValueProperty::GetValue(PCWSTR pwsz_key,
   winrt::com_ptr<IDebugHostContext> sp_ctx;
   hr = p_v8_local_instance->GetContext(sp_ctx.put());
   if (FAILED(hr)) return hr;
-  winrt::com_ptr<IDebugHostType> sp_v8_object_type = Extension::current_extension->GetV8ObjectType(sp_ctx);
+  winrt::com_ptr<IDebugHostType> sp_v8_object_type = Extension::current_extension_->GetV8ObjectType(sp_ctx);
 
   Location loc;
   hr = p_v8_local_instance->GetLocation(&loc);
@@ -37,7 +37,7 @@ HRESULT V8LocalValueProperty::GetValue(PCWSTR pwsz_key,
 
   // Read the pointer at the Object location
   ULONG64 obj_address;
-  hr = ext->sp_debug_host_memory->ReadPointers(sp_ctx.get(), loc, 1, &obj_address);
+  hr = ext->sp_debug_host_memory_->ReadPointers(sp_ctx.get(), loc, 1, &obj_address);
   if (FAILED(hr)) return hr;
 
   // If the val_ is a nullptr, then there is no value in the Local.

@@ -26,7 +26,7 @@ struct V8CachedObject: winrt::implements<V8CachedObject, IV8CachedObject> {
     auto mem_reader = [&sp_context](uint64_t address, size_t size, uint8_t *p_buffer) {
       ULONG64 bytes_read;
       Location loc{address};
-      HRESULT hr = Extension::current_extension->sp_debug_host_memory->ReadBytes(sp_context.get(), loc, p_buffer, size, &bytes_read);
+      HRESULT hr = Extension::current_extension_->sp_debug_host_memory_->ReadBytes(sp_context.get(), loc, p_buffer, size, &bytes_read);
       return SUCCEEDED(hr);
     };
 
@@ -37,7 +37,7 @@ struct V8CachedObject: winrt::implements<V8CachedObject, IV8CachedObject> {
         && static_cast<wchar_t*>(type_name) == std::wstring(L"v8::internal::TaggedValue");
 
     uint64_t tagged_ptr;
-    Extension::current_extension->sp_debug_host_memory->ReadPointers(sp_context.get(), loc, 1, &tagged_ptr);
+    Extension::current_extension_->sp_debug_host_memory_->ReadPointers(sp_context.get(), loc, 1, &tagged_ptr);
     if (compressed_pointer) tagged_ptr = static_cast<uint32_t>(tagged_ptr);
     heap_object = ::GetHeapObject(mem_reader, tagged_ptr, loc.GetOffset());
   }
@@ -182,7 +182,7 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
             // partial dumps.
             hr = context_object->GetContext(sp_ctx.put());
             if (FAILED(hr)) return hr;
-            sp_v8_object = Extension::current_extension->GetV8ObjectType(sp_ctx, k.type_name.c_str());
+            sp_v8_object = Extension::current_extension_->GetV8ObjectType(sp_ctx, k.type_name.c_str());
             if (sp_v8_object == nullptr) return E_FAIL;
 
             if (k.type == PropertyType::Array) {
