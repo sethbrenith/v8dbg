@@ -149,13 +149,7 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
       winrt::com_ptr<IV8CachedObject> sp_v8_cached_object = GetCachedObject(context_object);
       V8HeapObject* p_v8_heap_object;
       HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&p_v8_heap_object);
-      if (p_v8_heap_object && p_v8_heap_object->friendly_name.size() > 0) {
-        auto trunc_name = p_v8_heap_object->friendly_name.substr(0, 42);
-        if (p_v8_heap_object->friendly_name.size() > 42) trunc_name += u"...";
-        *display_string = ::SysAllocString(reinterpret_cast<wchar_t*>(trunc_name.data()));
-      } else {
-        *display_string = ::SysAllocString(L"<V8 Object>");
-      }
+      *display_string = ::SysAllocString(reinterpret_cast<wchar_t*>(p_v8_heap_object->friendly_name.data()));
       return S_OK;
     }
 
