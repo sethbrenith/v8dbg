@@ -37,7 +37,8 @@ point to the appropriate location on your machine.
 4. To build, in the same directory run: `ninja` (or, from the root directory,
    run `cmake --build ./x64`).
 
-The resulting `v8dbg.dll` and symbols should be generated in the build directory.
+The resulting `v8dbg.dll` and symbols should be generated in the build
+directory.
 
 ### Release builds
 
@@ -53,15 +54,16 @@ console app that exercises the extension. Launch with `runtests.bat dbg` to run
 the test executable in an instance of WinDbgx.
 
 As the version of dbgeng.dll that comes with Windows is a system DLL, it is
-found first by default, but the system version does not allow loading of extensions.
-Thus the script has to copy the extension and test executable to the WinDbgx
-location to load the correct dbgeng.dll and dbgmodel.dll files.
+found first by default, but the system version does not allow loading of
+extensions. Thus the script has to copy the extension and test executable to the
+WinDbgx location to load the correct dbgeng.dll and dbgmodel.dll files.
 
 The local path to WinDbgx in the first line of `runtests.bat` may need updating.
 
 ## Debugging the extension
 
-To debug the extension, launch a WinDbgx instance to debug with an active target, e.g.
+To debug the extension, launch a WinDbgx instance to debug with an active
+target, e.g.
 
 `windbgx \src\github\v8\out\x64.debug\d8.exe -e "console.log('hello');"`
 
@@ -88,7 +90,8 @@ should trigger the breakpoint.
 
 `.load "C:\\src\\github\\v8dbg\\x64\\v8dbg.dll"`
 
-Note: For D8, the below is a good breakpoint to set just before any script is run:
+Note: For D8, the below is a good breakpoint to set just before any script is
+run:
 
 `bp d8_exe!v8::Shell::ExecuteString`
 
