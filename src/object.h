@@ -185,7 +185,7 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
             sp_v8_object = Extension::current_extension_->GetV8ObjectType(sp_ctx, k.type_name.c_str());
             if (sp_v8_object == nullptr) return E_FAIL;
 
-            if (k.type == PropertyType::Array) {
+            if (k.type == PropertyType::kArray) {
               ULONG64 object_size{};
               sp_v8_object->GetSize(&object_size);
               ArrayDimension dimensions[] = {{/*start=*/0, /*length=*/k.length, /*stride=*/object_size}};
