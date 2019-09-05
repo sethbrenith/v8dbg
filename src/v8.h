@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-using MemReader = 
+using MemReader =
   std::function<bool(uint64_t address, size_t size, uint8_t* buffer)>;
 
 enum class PropertyType {
@@ -51,4 +51,4 @@ struct V8HeapObject {
   std::vector<Property> Properties;
 };
 
-V8HeapObject GetHeapObject(MemReader memReader, uint64_t address, uint64_t referringPointer);
+V8HeapObject GetHeapObject(MemReader memReader, uint64_t address, uint64_t referringPointer, const std::string& type_name);

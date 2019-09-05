@@ -47,7 +47,7 @@ std::u16string WidenString(const char* data) {
   return stream.str();
 }
 
-V8HeapObject GetHeapObject(MemReader memReader, uint64_t taggedPtr, uint64_t referringPointer) {
+V8HeapObject GetHeapObject(MemReader memReader, uint64_t taggedPtr, uint64_t referringPointer, const std::string& type_name) {
   // Read the value at the address, and see if it is a tagged pointer
 
   V8HeapObject obj;
@@ -58,7 +58,11 @@ V8HeapObject GetHeapObject(MemReader memReader, uint64_t taggedPtr, uint64_t ref
   // decompression based on the pointer to wherever we found this value, which
   // is likely (though not guaranteed) to be a heap pointer itself.
   heap_roots.any_heap_pointer = referringPointer;
-  auto props = d::GetObjectProperties(taggedPtr, reader_scope.GetReader(), heap_roots);
+  const char* type_name_ptr = nullptr;
+  if (!type_name.empty()) {
+    type_name_ptr = type_name.c_str();
+  }
+  auto props = d::GetObjectProperties(taggedPtr, reader_scope.GetReader(), heap_roots, type_name_ptr);
   obj.FriendlyName = WidenString(props->brief);
   for (int propertyIndex = 0; propertyIndex < props->num_properties; ++propertyIndex) {
     const auto& sourceProp = *props->properties[propertyIndex];
@@ -71,6 +75,17 @@ V8HeapObject GetHeapObject(MemReader memReader, uint64_t taggedPtr, uint64_t ref
     destProp.addrValue = sourceProp.address;
     destProp.length = sourceProp.num_values;
     // TODO indexed values
+    obj.Properties.push_back(destProp);
+  }
+
+  // For each guessed type, create a synthetic property that will request data about
+  // the same object again but with a more specific type hint. This only works
+  // in non-compressed-pointers mode.
+  for (int guessedTypeIndex = 0; guessedTypeIndex < props->num_guessed_types; ++guessedTypeIndex) {
+    Property destProp(WidenString(("guessed type " + std::to_string(guessedTypeIndex)).c_str()), WidenString(props->guessed_types[guessedTypeIndex]));
+    destProp.type = PropertyType::TaggedPtr;
+    destProp.addrValue = referringPointer;
+    destProp.length = 1;
     obj.Properties.push_back(destProp);
   }
 

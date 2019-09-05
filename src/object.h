@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <comutil.h>
+#include <sstream>
 
 // The representation of the underlying V8 object that will be cached on the
 // DataModel representation. (Needs to implement IUnknown).
@@ -36,10 +37,15 @@ struct V8CachedObject: winrt::implements<V8CachedObject, IV8CachedObject> {
         && SUCCEEDED(spType->GetName(type_name.GetAddress()))
         && static_cast<wchar_t*>(type_name) == std::wstring(L"v8::internal::TaggedValue");
 
+    std::ostringstream narrow_type_name;
+    if (!compressed_pointer) {
+      narrow_type_name << static_cast<char*>(type_name);
+    }
+
     uint64_t taggedPtr;
     Extension::currentExtension->spDebugHostMemory->ReadPointers(spContext.get(), loc, 1, &taggedPtr);
-    if (compressed_pointer) taggedPtr = static_cast<uint32_t>(taggedPtr);
-    heapObject = ::GetHeapObject(memReader, taggedPtr, loc.GetOffset());
+    if (compressed_pointer) taggedPtr = static_cast<uint64_t>(static_cast<int32_t>(static_cast<uint32_t>(taggedPtr)));
+    heapObject = ::GetHeapObject(memReader, taggedPtr, loc.GetOffset(), narrow_type_name.str());
   }
 
   V8HeapObject heapObject;
@@ -150,9 +156,7 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
       V8HeapObject* pV8HeapObject;
       HRESULT hr = spV8CachedObject->GetCachedV8HeapObject(&pV8HeapObject);
       if (pV8HeapObject && pV8HeapObject->FriendlyName.size() > 0) {
-        auto truncName = pV8HeapObject->FriendlyName.substr(0, 42);
-        if (pV8HeapObject->FriendlyName.size() > 42) truncName += u"...";
-        *displayString = ::SysAllocString(reinterpret_cast<wchar_t*>(truncName.data()));
+        *displayString = ::SysAllocString(reinterpret_cast<wchar_t*>(pV8HeapObject->FriendlyName.data()));
       } else {
         *displayString = ::SysAllocString(L"<V8 Object>");
       }
