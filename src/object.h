@@ -76,9 +76,9 @@ struct V8ObjectKeyEnumerator: winrt::implements<V8ObjectKeyEnumerator, IKeyEnume
     V8HeapObject *pV8HeapObject;
     HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&pV8HeapObject);
 
-    if (index >= pV8HeapObject->Properties.size()) return E_BOUNDS;
+    if (index >= pV8HeapObject->properties.size()) return E_BOUNDS;
 
-    auto name_ptr = pV8HeapObject->Properties[index].name.c_str();
+    auto name_ptr = pV8HeapObject->properties[index].name.c_str();
     *key = ::SysAllocString(U16ToWChar(name_ptr));
     ++index;
     return S_OK;
@@ -149,9 +149,9 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
       winrt::com_ptr<IV8CachedObject> sp_v8_cached_object = GetCachedObject(context_object);
       V8HeapObject* pV8HeapObject;
       HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&pV8HeapObject);
-      if (pV8HeapObject && pV8HeapObject->FriendlyName.size() > 0) {
-        auto trunc_name = pV8HeapObject->FriendlyName.substr(0, 42);
-        if (pV8HeapObject->FriendlyName.size() > 42) trunc_name += u"...";
+      if (pV8HeapObject && pV8HeapObject->friendly_name.size() > 0) {
+        auto trunc_name = pV8HeapObject->friendly_name.substr(0, 42);
+        if (pV8HeapObject->friendly_name.size() > 42) trunc_name += u"...";
         *display_string = ::SysAllocString(reinterpret_cast<wchar_t*>(trunc_name.data()));
       } else {
         *display_string = ::SysAllocString(L"<V8 Object>");
@@ -173,7 +173,7 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
       HRESULT hr = sp_v8_cached_object->GetCachedV8HeapObject(&pV8HeapObject);
 
       *has_key = false;
-      for(auto &k: pV8HeapObject->Properties) {
+      for(auto &k: pV8HeapObject->properties) {
         winrt::com_ptr<IDebugHostType> sp_v8_object;
         winrt::com_ptr<IDebugHostContext> sp_ctx;
 
@@ -182,59 +182,27 @@ struct V8ObjectDataModel: winrt::implements<V8ObjectDataModel, IDataModelConcept
           *has_key = true;
           if(key_value != nullptr) {
             winrt::com_ptr<IModelObject> sp_value;
-            switch (k.type) {
-              case PropertyType::Smi:
-                CreateInt32(k.smi_value, sp_value.put());
-                *key_value = sp_value.detach();
-                break;
-              case PropertyType::Address:
-                CreateULong64(k.addr_value, sp_value.put());
-                *key_value = sp_value.detach();
-                break;
-              case PropertyType::String:
-                CreateString(k.str_value, sp_value.put());
-                *key_value = sp_value.detach();
-                break;
-              case PropertyType::UInt:
-                CreateUInt32(k.uint_value, sp_value.put());
-                *key_value = sp_value.detach();
-                break;
-              case PropertyType::Bool:
-                CreateBool(k.bool_value, sp_value.put());
-                *key_value = sp_value.detach();
-                break;
-              case PropertyType::Number:
-                CreateNumber(k.num_value, sp_value.put());
-                *key_value = sp_value.detach();
-                break;
-              case PropertyType::TaggedPtr:
-              case PropertyType::TaggedPtrArray:
-                // TODO: if this property was a compressed pointer, then can we
-                // somehow keep its uncompressed type? That would let us supply
-                // a type hint on subsequent calls, which is good for working in
-                // partial dumps.
-                hr = context_object->GetContext(sp_ctx.put());
-                if (FAILED(hr)) return hr;
-                sp_v8_object = Extension::current_extension->GetV8ObjectType(sp_ctx, k.str_value.c_str());
-                if (sp_v8_object == nullptr) return E_FAIL;
+            // TODO: if this property was a compressed pointer, then can we
+            // somehow keep its uncompressed type? That would let us supply
+            // a type hint on subsequent calls, which is good for working in
+            // partial dumps.
+            hr = context_object->GetContext(sp_ctx.put());
+            if (FAILED(hr)) return hr;
+            sp_v8_object = Extension::current_extension->GetV8ObjectType(sp_ctx, k.type_name.c_str());
+            if (sp_v8_object == nullptr) return E_FAIL;
 
-                if (k.type == PropertyType::TaggedPtrArray) {
-                  ULONG64 object_size{};
-                  sp_v8_object->GetSize(&object_size);
-                  ArrayDimension dimensions[] = {{/*start=*/0, /*length=*/k.length, /*stride=*/object_size}};
-                  winrt::com_ptr<IDebugHostType> sp_v8_object_array;
-                  sp_v8_object->CreateArrayOf(/*dimensions=*/1, dimensions, sp_v8_object_array.put());
-                  sp_v8_object = sp_v8_object_array;
-                }
-
-                sp_data_model_manager->CreateTypedObject(sp_ctx.get(), Location{k.addr_value},
-                    sp_v8_object.get(), sp_value.put());
-                *key_value = sp_value.detach();
-                break;
-              // TODO: Other types (e.g. nested objects)
-              default:
-                assert(false);
+            if (k.type == PropertyType::Array) {
+              ULONG64 object_size{};
+              sp_v8_object->GetSize(&object_size);
+              ArrayDimension dimensions[] = {{/*start=*/0, /*length=*/k.length, /*stride=*/object_size}};
+              winrt::com_ptr<IDebugHostType> sp_v8_object_array;
+              sp_v8_object->CreateArrayOf(/*dimensions=*/1, dimensions, sp_v8_object_array.put());
+              sp_v8_object = sp_v8_object_array;
             }
+
+            sp_data_model_manager->CreateTypedObject(sp_ctx.get(), Location{k.addr_value},
+                sp_v8_object.get(), sp_value.put());
+            *key_value = sp_value.detach();
           }
           return S_OK;
         }

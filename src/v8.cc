@@ -59,19 +59,17 @@ V8HeapObject GetHeapObject(MemReader mem_reader, uint64_t tagged_ptr, uint64_t r
   // is likely (though not guaranteed) to be a heap pointer itself.
   heap_roots.any_heap_pointer = referring_pointer;
   auto props = d::GetObjectProperties(tagged_ptr, reader_scope.GetReader(), heap_roots);
-  obj.FriendlyName = WidenString(props->brief);
+  obj.friendly_name = WidenString(props->brief);
   for (int property_index = 0; property_index < props->num_properties; ++property_index) {
     const auto& source_prop = *props->properties[property_index];
     //printf("%s: %s: %llx\n", source_prop.name, source_prop.type, source_prop.values[0].value);
-    Property dest_prop(WidenString(source_prop.name), WidenString(source_prop.type));
-    dest_prop.type = PropertyType::TaggedPtr;
+    Property dest_prop(WidenString(source_prop.name), WidenString(source_prop.type), source_prop.address);
     if (source_prop.kind != d::PropertyKind::kSingle) {
-      dest_prop.type = PropertyType::TaggedPtrArray;
+      dest_prop.type = PropertyType::Array;
+      dest_prop.length = source_prop.num_values;
     }
-    dest_prop.addr_value = source_prop.address;
-    dest_prop.length = source_prop.num_values;
     // TODO indexed values
-    obj.Properties.push_back(dest_prop);
+    obj.properties.push_back(dest_prop);
   }
 
   return obj;
